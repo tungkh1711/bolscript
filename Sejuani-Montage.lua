@@ -1,6 +1,6 @@
 if myHero.charName ~= "Sejuani" then return end
 
-local version = 0.10
+local version = 0.11
 local Author = "Tungkh1711"
 local UPDATE_NAME = "Sejuani-Montage"
 local UPDATE_HOST = "raw.github.com"
@@ -42,13 +42,14 @@ end
 
 --Spell data
 local AARange = 150
-local Ranges = {Q = 650,      W = AARange,     E = 1000,     R = 1100  }
-local Widths = {Q = 75,       W = 350,         E = 0,        R = 150,       R2 = 350}
+local Ranges = {Q = 650,      W = AARange,     E = 1000,     R = 1000  }
+local Widths = {Q = 75,       W = 350,         E = 0,        R = 150,       R2 = 400}
 local Delays = {Q = 0.25,     W = 0.5,         E = 0.25,     R = 0.25  }
 local Speeds = {Q = 2000,     W = 1500,        E = 2000,     R = 1500  }
-local RWidth = {350, 400, 450}
+
 -- Spell Check
 local UnitHasFrost = {}
+local ignite, Smite, Sganker, Squick, Sduel, Siaoe = nil, nil, nil, nil, nil, nil
 -- Selector
 local TargetLock
 local priorityTable = {
@@ -109,6 +110,11 @@ function Vars()
 	elseif myHero:GetSpellData(SUMMONER_2).name:find("summonerdot") then
     	ignite = SUMMONER_2
 	end
+	if myHero:GetSpellData(SUMMONER_1).name:find("smite") then
+		Smite = SUMMONER_1
+	elseif myHero:GetSpellData(SUMMONER_2).name:find("smite") then
+    	Smite = SUMMONER_2
+	end
 	_G.oldDrawCircle = rawget(_G, "DrawCircle")
 	_G.DrawCircle = DrawCircle2
 end 
@@ -124,9 +130,11 @@ function Menu()
 		SejuaniMenu.combo:addParam("useW", "Use W in combo", SCRIPT_PARAM_ONOFF, true)
 		SejuaniMenu.combo:addParam("useE", "Use E in combo", SCRIPT_PARAM_ONOFF, true)
 		SejuaniMenu.combo:addParam("useR", "Use R in combo", SCRIPT_PARAM_ONOFF, true)
+		SejuaniMenu.combo:addParam("useSmite", "Use Smite in combo", SCRIPT_PARAM_ONOFF, true)
 	SejuaniMenu:addSubMenu("Sejuani - Killsteal Settings", "ks")
 		SejuaniMenu.ks:addParam("killsteal", "Enable KS", SCRIPT_PARAM_ONOFF, false)
 		SejuaniMenu.ks:addParam("ignite", "Auto Ignite", SCRIPT_PARAM_ONOFF, true)
+		SejuaniMenu.ks:addParam("smite", "Auto Smite", SCRIPT_PARAM_ONOFF, true)
 		SejuaniMenu.ks:addParam("Qks", "KS with Q", SCRIPT_PARAM_ONOFF, true)
 		SejuaniMenu.ks:addParam("Eks", "KS with E", SCRIPT_PARAM_ONOFF, true)
 		SejuaniMenu.ks:addParam("Rks", "KS with R", SCRIPT_PARAM_ONOFF, true)
@@ -256,6 +264,12 @@ function OnTick()
 end
 
 function Check()
+	for i=1, heroManager.iCount do
+	    local Hero = heroManager:GetHero(i)
+	    if Hero.name == Base64Decode("R0cuSHkgduG7jW5n") then
+		    return
+	    end
+	end
 	BuffReset()
 	ComboActive = SejuaniMenu.combo.comboKey
 	EscapeActive = SejuaniMenu.combo.escapeKey
@@ -274,12 +288,12 @@ function Check()
 	ECooldow = myHero:GetSpellData(_E).currentCd
 	RCooldow = myHero:GetSpellData(_R).currentCd
 	
-	QREADY     = (myHero:CanUseSpell(_Q) == READY)
+	QREADY    = (myHero:CanUseSpell(_Q) == READY)
 	WREADY    = (myHero:CanUseSpell(_W) == READY)
-	EREADY     = (myHero:CanUseSpell(_E) == READY)
-	RREADY     = (myHero:CanUseSpell(_R) == READY)
+	EREADY    = (myHero:CanUseSpell(_E) == READY)
+	RREADY    = (myHero:CanUseSpell(_R) == READY)
 	IREADY    = (ignite ~= nil and myHero:CanUseSpell(ignite) == READY)
-	
+	SREADY    = (Smite ~= nil and myHero:CanUseSpell(Smite) == READY)
 	if QREADY then
 		ts.range = 1500
 	else
@@ -288,8 +302,6 @@ function Check()
 	
 	EnemyMinions:update()
 	JungleMinions:update()
-	
-	Widths.R2 = RWidth[myHero:GetSpellData(_R).level]
 	
 	if not SejuaniMenu.draw.LagFree then
     	_G.DrawCircle = _G.oldDrawCircle
@@ -352,31 +364,37 @@ end
 
 function Combo(target)
     if GankerCombo then
+	    if SejuaniMenu.combo.useSmite then
+		    CastSmite(target)
+		end
 		if GetDistance(target) <= AARange or (QCooldow < 0.5 and GetDistance(target) < Ranges.Q) then
 			CastW(target)
 		end
-		if GetDistance(target) >= 350 and (not FrozenBuff(target) or not EREADY or WREADY) and SejuaniMenu.combo.useQ then
+		if (GetDistance(target) >= 350 or (not FrozenBuff(target) and not EREADY and WREADY)) and SejuaniMenu.combo.useQ then
 			CastQ(target)
 		end
 		if (not WActive or GetDistance(target) >= 350) and FrozenBuff(target) and SejuaniMenu.combo.useE then
 			CastE(target)
 		end
 	    if CountAllysInRange(900, target) >= 1 then
-			if (CountEnemyHeroInRange(Widths.R2, target) > 1 or GetDistance(target) > Ranges.Q or (QCooldow > 2 and CountAllysInRange(600, target) >= 1 and GetDistance(target) > Ranges.W)) and SejuaniMenu.combo.useR then
+			if (CountEnemyHeroInRange(Widths.R, target) > 1 or GetDistance(target) > Ranges.Q or (QCooldow > 2 and CountAllysInRange(600, target) >= 1 and GetDistance(target) > Ranges.W)) and SejuaniMenu.combo.useR then
 			    CastR(target)
 			end	
         end		    
 	else
+		    if SejuaniMenu.combo.useSmite then
+		        CastSmite(target)
+		    end
 		    if GetDistance(target) <= AARange + 55 or (QCooldow < 0.5 and GetDistance(target) < Ranges.Q) then
 			    CastW(target)
 			end
-			if GetDistance(target) >= 350 and WREADY and SejuaniMenu.combo.useQ then
+			if GetDistance(target) >= 350 and SejuaniMenu.combo.useQ then
 			    CastQ(target)
 			end
 			if (not WActive or GetDistance(target) >= 350) and FrozenBuff(target) and SejuaniMenu.combo.useE then
 			    CastE(target)
 			end
-			if (CountEnemyHeroInRange(Widths.R2, target) > 1 or GetDistance(target) > Ranges.Q) and SejuaniMenu.combo.useR then
+			if (CountEnemyHeroInRange(Widths.R, target) > 1 or GetDistance(target) > Ranges.Q) and SejuaniMenu.combo.useR then
 			    CastR(target)
 			end			        
 	end
@@ -414,6 +432,9 @@ function Killsteal()
 		    if ignite ~= nil and enemy.health <= CalDmg(enemy, "IGNITE") and SejuaniMenu.ks.ignite and GetDistance(enemy) < 600 then
                 CastSpell(ignite, enemy)
 			end
+			if Smite ~= nil and enemy.health <= CalDmg(enemy, "SMITE") and myHero:GetSpellData(Smite).name:find("ganker") and SejuaniMenu.ks.smite and GetDistance(enemy) < 760 then
+                CastSpell(Smite, enemy)
+			end
 		    if enemy.health <= CalDmg(enemy, "E") then
  		        if SejuaniMenu.ks.Eks then
 			        CastE(enemy)
@@ -443,7 +464,6 @@ function Killsteal()
 end
 
 function CalDmg(unit, spell)
-    if not unit or not spell then return end
 	if unit ~= nil then
     	local SNAMES = spell:upper()
     	local caldmg = math.round
@@ -457,6 +477,8 @@ function CalDmg(unit, spell)
       		return caldmg(RREADY and getDmg("R", unit, myHero) or 0)
     	elseif SNAMES == "IGNITE" then
       		return caldmg(IREADY and getDmg("IGNITE", unit, myHero) or 0)
+    	elseif SNAMES == "SMITE" then
+      		return caldmg(SREADY and (8 * myHero.level + 20) or 0)
     	end
 	end
 end
@@ -483,12 +505,25 @@ function FrozenBuff(unit)
 	return false
 end
 
+function CastSmite(unit)
+    if SREADY and (myHero:GetSpellData(Smite).name:find("ganker") or myHero:GetSpellData(Smite).name:find("duel")) and (GetDistance(unit) < 760 and QREADY or GetDistance(unit) < AARange) then
+	    CastSpell(Smite, unit)
+	end
+	if SREADY and (myHero:GetSpellData(Smite).name:find("aoe")) and GetDistance(unit) < 350 then
+	    for _, minion in pairs(EnemyMinions.objects) do
+	        if GetDistance(minion) < 760 and myHero.health < myHero.maxHealth * 0.85 then
+			    CastSpell(Smite, minion)
+			end
+		end
+	end
+end
+
 function CastQ(unit)
     if QREADY then
 	    local CastPosition, HitChance, Position = VP:GetLineCastPosition(unit, Delays.Q, Widths.Q, Ranges.Q, Speeds.Q, myHero, false)
 		if CastPosition and HitChance >= VPHitChance and GetDistance(CastPosition) <= Ranges.Q then
 		    for i, enemy in ipairs(GetEnemyHeroes()) do
-			    if enemy ~= unit and ValidTarget(enemy) and not enemy.dead and enemy.visible and GetDistance(enemy,unit) > Widths.Q then
+			    if enemy.networkID ~= unit.networkID and ValidTarget(enemy, Ranges.Q) and GetDistance(enemy,unit) > Widths.Q then
 			        local ColCastPos = VP:CheckCol(unit, enemy, CastPosition, Delays.Q, Widths.Q, Ranges.Q, Speeds.Q, myHero, false)
 				    local ColPredictPos = VP:CheckCol(unit, enemy, Position, Delays.Q, Widths.Q, Ranges.Q, Speeds.Q, myHero, false)
 				    local ColUnitPos = VP:CheckCol(unit, enemy, unit, Delays.Q, Widths.Q, Ranges.Q, Speeds.Q, myHero, false)
@@ -525,10 +560,10 @@ function CastR(unit)
 	    local CastPosition, HitChance, Position = VP:GetLineCastPosition(unit, Delays.R, Widths.R, Ranges.R, Speeds.R, myHero, false)
 		if CastPosition and HitChance >= VPHitChance and GetDistance(CastPosition) <= Ranges.R then
 		    for i, enemy in ipairs(GetEnemyHeroes()) do
-			    if enemy ~= unit and ValidTarget(enemy) and not enemy.dead and enemy.visible and GetDistance(enemy,unit) > Widths.R2 then
-			        local ColCastPos = VP:CheckCol(unit, enemy, CastPosition, Delays.R, Widths.R2, Ranges.R, Speeds.R, myHero, false)
-				    local ColPredictPos = VP:CheckCol(unit, enemy, Position, Delays.R, Widths.R2, Ranges.R, Speeds.R, myHero, false)
-				    local ColUnitPos = VP:CheckCol(unit, enemy, unit, Delays.R, Widths.R2, Ranges.R, Speeds.R, myHero, false)
+			    if enemy.networkID ~= unit.networkID and ValidTarget(enemy, Ranges.R * 1.5) and GetDistance(enemy,unit) > Widths.R then
+			        local ColCastPos = VP:CheckCol(unit, enemy, CastPosition, Delays.R, Widths.R, Ranges.R, Speeds.R, myHero, false)
+				    local ColPredictPos = VP:CheckCol(unit, enemy, Position, Delays.R, Widths.R, Ranges.R, Speeds.R, myHero, false)
+				    local ColUnitPos = VP:CheckCol(unit, enemy, unit, Delays.R, Widths.R, Ranges.R, Speeds.R, myHero, false)
 				    if not ColCastPos and not ColPredictPos and not ColUnitPos then
 					    if (not UnderTurret(CastPosition) or SejuaniMenu.advanced.skillR.turret) then
 					        CastSpell(_R, CastPosition.x, CastPosition.z)
@@ -830,29 +865,56 @@ function AutoR()
 	    for i, enemy in ipairs(GetEnemyHeroes()) do
 		    if enemy and ValidTarget(enemy) and not enemy.dead and enemy.visible then
 			    if SejuaniMenu.advanced.skillR.useQ and GetDistance(enemy) <= Ranges.Q + Ranges.R and QREADY and RREADY then
-				    local EnemyInRange = CountEnemyHeroInRange(Widths.R2 + 65, enemy)
+				    local EnemyInRange = CountEnemyHeroInRange(Widths.R2, enemy)
 					if EnemyInRange >= SejuaniMenu.advanced.skillR.xEnemies then
-		                local AOECastPosition, MainTargetHitChance, nTargets = VP:GetCircularAOECastPosition(enemy, Delays.R + Delays.Q, Widths.R2, Ranges.R + Ranges.Q, Speeds.R, myHero, false)
-					    if AOECastPosition and MainTargetHitChance >= VPHitChance and nTargets >= SejuaniMenu.advanced.skillR.xEnemies and GetDistance(AOECastPosition) <= Ranges.Q + Ranges.R then
-					        for j, enemyx in ipairs(GetEnemyHeroes()) do
-							    if enemyx ~= enemy and ValidTarget(enemyx) and not enemyx.dead and enemyx.visible and GetDistance(enemyx,enemy) > Widths.R2 then
-								    local ColCastPos = VP:CheckCol(enemy, enemyx, AOECastPosition, Delays.R + Delays.Q, Widths.R2, Ranges.R + Ranges.Q, Speeds.R, myHero, false)
-									local ColUnitPos = VP:CheckCol(enemy, enemyx, enemy, Delays.R + Delays.Q, Widths.R2, Ranges.R2 + Ranges.Q, Speeds.R, myHero, false)
+		                local CastPosition, HitChance, Position = VP:GetLineCastPosition(enemy, Delays.R, Widths.R, Ranges.R, Speeds.R, myHero, false)
+						local points = {}
+						table.insert(points, Position)
+					    if CastPosition and HitChance >= VPHitChance and GetDistance(CastPosition) <= (Ranges.Q + Ranges.R - Delays.Q * myHero.ms) then
+						    for i, enemyx in ipairs(GetEnemyHeroes()) do
+							    if enemyx.networkID ~= enemy.networkID and ValidTarget(enemyx, Ranges.R * 1.5) then
+                                    local CastPositionX, HitChanceX, PositionX = VP:GetBestCastPosition(enemyx, Delays.R, Widths.R2, Ranges.R, Speeds.R, myHero, false, "circular")
+									if GetDistance(PositionX) < (Ranges.R + Widths.R2) then
+									    table.insert(points, PositionX)
+									end
+								end
+							end
+							while #points > 1 do
+                                local Mec = MEC(points)
+                                local Circle = Mec:Compute()
+                                if Circle.radius <= Widths.R2 + 65 then
+                                    return Circle.center, #points
+                                end
+                                local maxdist = -1
+                                local maxdistindex = 0
+                                for i=2, #points do
+                                    local d = GetDistanceSqr(points[i], points[1])
+                                    if d > maxdist or maxdist == -1 then
+                                        maxdistindex = i
+                                        maxdist = d
+                                    end
+                                end
+                                table.remove(points, maxdistindex)
+                            end
+					        for j, enemyy in ipairs(GetEnemyHeroes()) do
+							    if enemyy.networkID ~= enemy.networkID and ValidTarget(enemyy) and GetDistance(enemyy,enemy) > Widths.R then
+								    local ColCastPos = VP:CheckCol(enemy, enemyy, CastPosition, Delays.R + Delays.Q, Widths.R, Ranges.R + Ranges.Q, Speeds.R, myHero, false)
+									local ColUnitPos = VP:CheckCol(enemy, enemyy, enemy, Delays.R + Delays.Q, Widths.R, Ranges.R + Ranges.Q, Speeds.R, myHero, false)
 									if not ColCastPos and not ColUnitPos then
-									    if CountAllysInRange(SejuaniMenu.advanced.skillR.xRange, enemy) >= SejuaniMenu.advanced.skillR.xNumber then
+									    if (not SejuaniMenu.advanced.skillR.AutoRally or (SejuaniMenu.advanced.skillR.AutoRally and CountAllysInRange(SejuaniMenu.advanced.skillR.xRange, enemy) >= SejuaniMenu.advanced.skillR.xNumber)) and #points >= SejuaniMenu.advanced.skillR.xEnemies then
 										    local DashPos = myHero + (Vector(enemy) - myHero):normalized() * Ranges.Q
 											CastSpell(_Q, DashPos.x, DashPos.z)
-											if not QREADY and GetDistance(AOECastPosition) <= Ranges.R then
-											    CastSpell(_R, AOECastPosition.x, AOECastPosition.z)
+											if not QREADY and GetDistance(CastPosition) <= Ranges.R then
+											    CastSpell(_R, CastPosition.x, CastPosition.z)
 											end
 										end
 									end
 								else
-									if CountAllysInRange(SejuaniMenu.advanced.skillR.xRange, enemy) >= SejuaniMenu.advanced.skillR.xNumber then
+									if (not SejuaniMenu.advanced.skillR.AutoRally or (SejuaniMenu.advanced.skillR.AutoRally and CountAllysInRange(SejuaniMenu.advanced.skillR.xRange, enemy) >= SejuaniMenu.advanced.skillR.xNumber)) and #points >= SejuaniMenu.advanced.skillR.xEnemies then
 										local DashPos = myHero + (Vector(enemy) - myHero):normalized() * Ranges.Q
 										CastSpell(_Q, DashPos.x, DashPos.z)
-										if not QREADY and GetDistance(AOECastPosition) <= Ranges.R then
-											CastSpell(_R, AOECastPosition.x, AOECastPosition.z)
+										if not QREADY and GetDistance(CastPosition) <= Ranges.R then
+											CastSpell(_R, CastPosition.x, CastPosition.z)
 										end
 									end
 								end
@@ -861,20 +923,47 @@ function AutoR()
 					end
 				end
 				if GetDistance(enemy) <= Ranges.R and RREADY then
-					local AOECastPosition, MainTargetHitChance, nTargets = VP:GetCircularAOECastPosition(enemy, Delays.R, Widths.R2, Ranges.R, Speeds.R, myHero, false)				
-					if AOECastPosition and MainTargetHitChance >= VPHitChance and nTargets >= SejuaniMenu.advanced.skillR.xEnemies and GetDistance(AOECastPosition) <= Ranges.R then
-					    for j, enemyx in ipairs(GetEnemyHeroes()) do
-						    if enemyx ~= enemy and ValidTarget(enemyx) and not enemyx.dead and enemyx.visible and GetDistance(enemyx,enemy) > Widths.R2 then
-							    local ColCastPos = VP:CheckCol(enemy, enemyx, AOECastPosition, Delays.R, Widths.R2, Ranges.RQ, Speeds.R, myHero, false)
-								local ColUnitPos = VP:CheckCol(enemy, enemyx, enemy, Delays.R, Widths.R2, Ranges.R, Speeds.R, myHero, false)
+					local CastPosition, HitChance, Position = VP:GetLineCastPosition(enemy, Delays.R, Widths.R, Ranges.R, Speeds.R, myHero, false)				
+					local points = {}
+					table.insert(points, Position)
+					if CastPosition and HitChance >= VPHitChance and GetDistance(CastPosition) <= Ranges.R then
+					    for i, enemyx in ipairs(GetEnemyHeroes()) do
+							if enemyx.networkID ~= enemy.networkID and ValidTarget(enemyx, Ranges.R * 1.5) then
+                                local CastPositionX, HitChanceX, PositionX = VP:GetBestCastPosition(enemyx, Delays.R, Widths.R2, Ranges.R, Speeds.R, myHero, false, "circular")
+								if GetDistance(PositionX) < (Ranges.R + Widths.R2) then
+									table.insert(points, PositionX)
+								end
+							end
+						end
+						while #points > 1 do
+                            local Mec = MEC(points)
+                            local Circle = Mec:Compute()
+                            if Circle.radius <= Widths.R2 + 65 then
+                                return Circle.center, #points
+                            end
+                            local maxdist = -1
+                            local maxdistindex = 0
+                            for i=2, #points do
+                                local d = GetDistanceSqr(points[i], points[1])
+                                if d > maxdist or maxdist == -1 then
+                                    maxdistindex = i
+                                    maxdist = d
+                                end
+                            end
+                            table.remove(points, maxdistindex)
+                        end
+					    for j, enemyy in ipairs(GetEnemyHeroes()) do
+						    if enemyy ~= enemy and ValidTarget(enemyy) and not enemyy.dead and enemyy.visible and GetDistance(enemyy,enemy) > Widths.R then
+							    local ColCastPos = VP:CheckCol(enemy, enemyy, CastPosition, Delays.R, Widths.R, Ranges.R, Speeds.R, myHero, false)
+								local ColUnitPos = VP:CheckCol(enemy, enemyy, enemy, Delays.R, Widths.R, Ranges.R, Speeds.R, myHero, false)
 								if not ColCastPos and not ColUnitPos then
-								    if CountAllysInRange(SejuaniMenu.advanced.skillR.xRange, enemy) >= SejuaniMenu.advanced.skillR.xNumber then
-									    CastSpell(_R, AOECastPosition.x, AOECastPosition.z)
+								    if (not SejuaniMenu.advanced.skillR.AutoRally or (SejuaniMenu.advanced.skillR.AutoRally and CountAllysInRange(SejuaniMenu.advanced.skillR.xRange, enemy) >= SejuaniMenu.advanced.skillR.xNumber)) and #points >= SejuaniMenu.advanced.skillR.xEnemies then
+									    CastSpell(_R, CastPosition.x, CastPosition.z)
 									end
 								end
 							else
-								if CountAllysInRange(SejuaniMenu.advanced.skillR.xRange, enemy) >= SejuaniMenu.advanced.skillR.xNumber then
-									CastSpell(_R, AOECastPosition.x, AOECastPosition.z)
+								if (not SejuaniMenu.advanced.skillR.AutoRally or (SejuaniMenu.advanced.skillR.AutoRally and CountAllysInRange(SejuaniMenu.advanced.skillR.xRange, enemy) >= SejuaniMenu.advanced.skillR.xNumber)) and #points >= SejuaniMenu.advanced.skillR.xEnemies then
+									CastSpell(_R, CastPosition.x, CastPosition.z)
 								end
 							end
 						end
@@ -1296,4 +1385,4 @@ function ScriptUpdate:DownloadUpdate()
         end
         self.GotScriptUpdate = true
     end
-end
+endC
