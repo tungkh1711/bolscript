@@ -408,6 +408,7 @@ function WallMenu()
         YasuoWall:addParam("CAttack","Block crit attack",SCRIPT_PARAM_ONOFF,true)		
         for i,enemy in pairs (GetEnemyHeroes()) do
             for j,spell in pairs (Spells) do
+			    if skillShield[unit.charName] == nil then return end
                 enemyspell = enemy:GetSpellData(spell).name
 	            spelltype, casttype = getSpellType(enemy, enemyspell)
                 if skillShield[enemy.charName] then 
@@ -427,6 +428,7 @@ function DashMenu()
     YasuoDash:addParam("smartdash","Use smart dash in combo", SCRIPT_PARAM_ONOFF,true)	
         for i,enemy in pairs (GetEnemyHeroes()) do
             for j,spell in pairs (Spells) do
+			    if skillShield[unit.charName] == nil then return end
                 enemyspell = enemy:GetSpellData(spell).name
 	            spelltype, casttype = getSpellType(enemy, enemyspell)
                 if (spelltype == "Q" or spelltype == "W" or spelltype == "E" or spelltype == "R") then
