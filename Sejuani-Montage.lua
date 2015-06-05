@@ -1,6 +1,6 @@
 if myHero.charName ~= "Sejuani" then return end
 
-local version = 0.12
+local version = 0.13
 local Author = "Tungkh1711"
 local UPDATE_NAME = "Sejuani-Montage"
 local UPDATE_HOST = "raw.github.com"
@@ -735,8 +735,8 @@ function OnCreateObj(obj)
       	table.insert(JungleFocusMobs, obj)
   	elseif JungleMobNames[obj.name] then
       	table.insert(JungleMobs, obj)
-  	elseif JungleTeamNames[obj.name] then
-	    table.insert(JungleTeamNames, obj)
+  	--elseif JungleTeamNames[obj.name] then
+	    --table.insert(JungleTeamNames, obj)
 	end
 end
 
@@ -752,11 +752,11 @@ function OnDeleteObj(obj)
         	table.remove(JungleFocusMobs, i)
       	end
   	end
-  	for i, Mob in pairs(JungleTeamNames) do
-      	if obj.name == Mob.name then
-        	table.remove(JungleTeamNames, i)
-      	end
-  	end
+  	--for i, Mob in pairs(JungleTeamNames) do
+      	--if obj.name == Mob.name then
+        	--table.remove(JungleTeamNames, i)
+      	--end
+  	--end
 end
 
 function JungleNames()
