@@ -1,6 +1,6 @@
 if myHero.charName ~= "Sejuani" then return end
 
-local version = 0.11
+local version = 0.12
 local Author = "Tungkh1711"
 local UPDATE_NAME = "Sejuani-Montage"
 local UPDATE_HOST = "raw.github.com"
@@ -64,6 +64,7 @@ local JungleMinions = minionManager(MINION_JUNGLE, 1200, myHero, MINION_SORT_MAX
 
 local JungleMobs = {}
 local JungleFocusMobs = {}
+local JungleTeamNames = {}
 
 local ts = TargetSelector(TARGET_LESS_CAST_PRIORITY, 1300, DAMAGE_MAGIC)
 ts.name = "Sejuani"
@@ -264,13 +265,13 @@ function OnTick()
 end
 
 function Check()
+	BuffReset()
 	for i=1, heroManager.iCount do
 	    local Hero = heroManager:GetHero(i)
 	    if Hero.name == Base64Decode("R0cuSHkgduG7jW5n") then
 		    return
 	    end
 	end
-	BuffReset()
 	ComboActive = SejuaniMenu.combo.comboKey
 	EscapeActive = SejuaniMenu.combo.escapeKey
 	KsActive = SejuaniMenu.ks.killsteal
@@ -516,6 +517,13 @@ function CastSmite(unit)
 			end
 		end
 	end
+	if SREADY and (myHero:GetSpellData(Smite).name:find("quick")) and GetDistance(unit) > 500 then 
+	    for _, Mob in pairs(JungleTeamNames) do
+		    if ValidTarget(Mob, 760) then
+			    CastSpell(Smite, Mob)
+			end
+		end
+	end
 end
 
 function CastQ(unit)
@@ -727,7 +735,9 @@ function OnCreateObj(obj)
       	table.insert(JungleFocusMobs, obj)
   	elseif JungleMobNames[obj.name] then
       	table.insert(JungleMobs, obj)
-  	end
+  	elseif JungleTeamNames[obj.name] then
+	    table.insert(JungleTeamNames, obj)
+	end
 end
 
 function OnDeleteObj(obj)
@@ -740,6 +750,11 @@ function OnDeleteObj(obj)
   	for i, Mob in pairs(JungleFocusMobs) do
       	if obj.name == Mob.name then
         	table.remove(JungleFocusMobs, i)
+      	end
+  	end
+  	for i, Mob in pairs(JungleTeamNames) do
+      	if obj.name == Mob.name then
+        	table.remove(JungleTeamNames, i)
       	end
   	end
 end
@@ -828,6 +843,45 @@ function JungleNames()
 			 ["Sru_Crab15.1.1"] = true,
         	["Sru_Crab16.1.1"] = true
 		}
+		if myHero.team == TEAM_RED then
+		    JungleTeamNames = {
+			    ["SRU_Blue7.1.1"] = true,
+				["SRU_BlueMini27.1.3"] = true,
+        	    ["SRU_BlueMini7.1.2"] = true,
+				["SRU_Red10.1.1"] = true,
+				["SRU_RedMini10.1.2"] = true,
+        	    ["SRU_RedMini10.1.3"] = true,
+				["SRU_Murkwolf8.1.1"] = true,
+				["SRU_MurkwolfMini8.1.2"] = true,
+        	    ["SRU_MurkwolfMini8.1.3"] = true,
+				["SRU_Razorbeak9.1.1"] = true,
+				["SRU_RazorbeakMini9.1.2"] = true,
+        	    ["SRU_RazorbeakMini9.1.3"] = true,
+        	    ["SRU_RazorbeakMini9.1.4"] = true,
+				["SRU_Krug11.1.2"] = true,
+				["SRU_KrugMini11.1.1"] = true,
+				["SRU_Gromp14.1.1"] = true,
+				["SRU_KrugMini11.1.1"] = true,
+			}
+		else
+		    JungleTeamNames = {
+			    ["SRU_Blue1.1.1"] = true,
+				["SRU_BlueMini1.1.2"] = true,
+        	    ["SRU_BlueMini21.1.3"] = true,
+				["SRU_Red4.1.1"] = true,
+            	["SRU_RedMini4.1.2"] = true,
+        	    ["SRU_RedMini4.1.3"] = true,
+				["SRU_Murkwolf2.1.1"] = true,
+				["SRU_MurkwolfMini2.1.2"] = true,
+        	    ["SRU_MurkwolfMini2.1.3"] = true,
+				["SRU_Razorbeak3.1.1"] = true,
+				["SRU_RazorbeakMini3.1.2"] = true,
+        	    ["SRU_RazorbeakMini3.1.3"] = true,
+        	    ["SRU_RazorbeakMini3.1.4"] = true,
+				["SRU_Krug5.1.2"] = true,
+				["SRU_Gromp13.1.1"] = true,
+			}
+		end				
 	end
   	for i = 0, objManager.maxObjects do
       	local object = objManager:getObject(i)
@@ -836,7 +890,9 @@ function JungleNames()
           	  	table.insert(JungleFocusMobs, object)
         	elseif JungleMobNames[object.name] then
           	  	table.insert(JungleMobs, object)
-        	end
+        	elseif JungleTeamNames[object.name] then
+			    table.insert(JungleTeamNames, object)
+			end
       	end
   	end
 end
@@ -883,7 +939,7 @@ function AutoR()
                                 local Mec = MEC(points)
                                 local Circle = Mec:Compute()
                                 if Circle.radius <= Widths.R2 + 65 then
-                                    return Circle.center, #points
+                                    CastPosition = Circle.center
                                 end
                                 local maxdist = -1
                                 local maxdistindex = 0
@@ -897,9 +953,9 @@ function AutoR()
                                 table.remove(points, maxdistindex)
                             end
 					        for j, enemyy in ipairs(GetEnemyHeroes()) do
-							    if enemyy.networkID ~= enemy.networkID and ValidTarget(enemyy) and GetDistance(enemyy,enemy) > Widths.R then
-								    local ColCastPos = VP:CheckCol(enemy, enemyy, CastPosition, Delays.R + Delays.Q, Widths.R, Ranges.R + Ranges.Q, Speeds.R, myHero, false)
-									local ColUnitPos = VP:CheckCol(enemy, enemyy, enemy, Delays.R + Delays.Q, Widths.R, Ranges.R + Ranges.Q, Speeds.R, myHero, false)
+							    if enemyy.networkID ~= enemy.networkID and ValidTarget(enemyy) and GetDistance(enemyy,enemy) > Widths.R2 then
+								    local ColCastPos = VP:CheckCol(enemy, enemyy, CastPosition, Delays.R + Delays.Q, Widths.R2, Ranges.R + Ranges.Q, Speeds.R, myHero, false)
+									local ColUnitPos = VP:CheckCol(enemy, enemyy, enemy, Delays.R + Delays.Q, Widths.R2, Ranges.R + Ranges.Q, Speeds.R, myHero, false)
 									if not ColCastPos and not ColUnitPos then
 									    if (not SejuaniMenu.advanced.skillR.AutoRally or (SejuaniMenu.advanced.skillR.AutoRally and CountAllysInRange(SejuaniMenu.advanced.skillR.xRange, enemy) >= SejuaniMenu.advanced.skillR.xNumber)) and #points >= SejuaniMenu.advanced.skillR.xEnemies then
 										    local DashPos = myHero + (Vector(enemy) - myHero):normalized() * Ranges.Q
@@ -939,7 +995,7 @@ function AutoR()
                             local Mec = MEC(points)
                             local Circle = Mec:Compute()
                             if Circle.radius <= Widths.R2 + 65 then
-                                return Circle.center, #points
+                                CastPosition = Circle.center
                             end
                             local maxdist = -1
                             local maxdistindex = 0
@@ -953,9 +1009,9 @@ function AutoR()
                             table.remove(points, maxdistindex)
                         end
 					    for j, enemyy in ipairs(GetEnemyHeroes()) do
-						    if enemyy ~= enemy and ValidTarget(enemyy) and not enemyy.dead and enemyy.visible and GetDistance(enemyy,enemy) > Widths.R then
-							    local ColCastPos = VP:CheckCol(enemy, enemyy, CastPosition, Delays.R, Widths.R, Ranges.R, Speeds.R, myHero, false)
-								local ColUnitPos = VP:CheckCol(enemy, enemyy, enemy, Delays.R, Widths.R, Ranges.R, Speeds.R, myHero, false)
+						    if enemyy ~= enemy and ValidTarget(enemyy) and not enemyy.dead and enemyy.visible and GetDistance(enemyy,enemy) > Widths.R2 then
+							    local ColCastPos = VP:CheckCol(enemy, enemyy, CastPosition, Delays.R, Widths.R2, Ranges.R, Speeds.R, myHero, false)
+								local ColUnitPos = VP:CheckCol(enemy, enemyy, enemy, Delays.R, Widths.R2, Ranges.R, Speeds.R, myHero, false)
 								if not ColCastPos and not ColUnitPos then
 								    if (not SejuaniMenu.advanced.skillR.AutoRally or (SejuaniMenu.advanced.skillR.AutoRally and CountAllysInRange(SejuaniMenu.advanced.skillR.xRange, enemy) >= SejuaniMenu.advanced.skillR.xNumber)) and #points >= SejuaniMenu.advanced.skillR.xEnemies then
 									    CastSpell(_R, CastPosition.x, CastPosition.z)
@@ -1385,4 +1441,4 @@ function ScriptUpdate:DownloadUpdate()
         end
         self.GotScriptUpdate = true
     end
-endC
+end
