@@ -42,7 +42,7 @@ end
 
 --Spell data
 local AARange = 150
-local Ranges = {Q = 650,      W = AARange,     E = 1000,     R = 1050  }
+local Ranges = {Q = 650,      W = AARange,     E = 1000,     R = 1100  }
 local Widths = {Q = 75,       W = 350,         E = 0,        R = 150,       R2 = 450}
 local Delays = {Q = 0.25,     W = 0.5,         E = 0.25,     R = 0.25  }
 local Speeds = {Q = 2000,     W = 1500,        E = 2000,     R = 1500  }
