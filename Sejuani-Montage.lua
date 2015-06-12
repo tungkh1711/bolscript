@@ -925,7 +925,7 @@ function AutoR()
 				    DelayR = Delays.R
 				elseif SejuaniMenu.advanced.skillR.useQ and GetDistance(enemy) <= Ranges.Q + Ranges.R and GetDistance(enemy) > Ranges.R and QREADY and RREADY then
                     local DelayR = (Ranges.Q/Speeds.Q + Delays.R + 0.125)
-					RangeR = Ranges.R + Ranges.Q + 100
+					RangeR = Ranges.R + Ranges.Q
 					UseQR = true
                 end	
                 if DelayR ~= nil then				
