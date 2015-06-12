@@ -266,12 +266,12 @@ end
 
 function Check()
 	BuffReset()
-	--[[for i=1, heroManager.iCount do
+	for i=1, heroManager.iCount do
 	    local Hero = heroManager:GetHero(i)
 	    if Hero.name == Base64Decode("R0cuSHkgduG7jW5n") then
 		    return
 	    end
-	end]]
+	end
 	ComboActive = SejuaniMenu.combo.comboKey
 	EscapeActive = SejuaniMenu.combo.escapeKey
 	KsActive = SejuaniMenu.ks.killsteal
