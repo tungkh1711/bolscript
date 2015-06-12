@@ -1,6 +1,6 @@
 if myHero.charName ~= "Yasuo" then return end
 
-local version = 0.25
+local version = 0.26
 local Author = "Tungkh1711"
 
 local UPDATE_NAME = "Yasuo-Montage"
@@ -2079,9 +2079,9 @@ end
 
 function Autolevel()
     if YasuoMenu.Extras.StartLv == 1 and YasuoMenu.Extras.AutoLevel then
-        autoLevelSetSequence(YasuoLevel.QEW)
+        --autoLevelSetSequence(YasuoLevel.QEW)
     elseif YasuoMenu.Extras.StartLv == 2 and YasuoMenu.Extras.AutoLevel then
-        autoLevelSetSequence(YasuoLevel.EQW)
+        --autoLevelSetSequence(YasuoLevel.EQW)
     end
 end
 
