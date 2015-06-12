@@ -958,7 +958,7 @@ function AutoR()
 					local MaxHit = 1
 					
 					if #points >= 1 then
-						local Direction = (Vector(myHero.x, 0, myHero.z) + Vector(CastPosition.x, 0, CastPosition.z)):normalized() * Widths.R2 
+						local Direction = Vector(CastPosition.x, 0, CastPosition.z) + (-Vector(myHero.x, 0, myHero.z) + Vector(CastPosition.x, 0, CastPosition.z)):normalized() * Widths.R2 
 						local Vector1 = Direction:rotated(0, RAngle / 2, 0)
 						local Vector2 = Direction:rotated(0, -RAngle / 2, 0)
 						MaxHit = CountVectorsBetween(Vector1, Vector2, points)
