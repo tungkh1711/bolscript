@@ -1,6 +1,6 @@
 if myHero.charName ~= "Sejuani" then return end
 
-local version = 0.14
+local version = 0.15
 local Author = "Tungkh1711"
 local UPDATE_NAME = "Sejuani-Montage"
 local UPDATE_HOST = "raw.github.com"
@@ -371,7 +371,7 @@ function Combo(target)
 		if GetDistance(target) <= AARange or (QCooldow < 0.5 and GetDistance(target) < Ranges.Q) then
 			CastW(target)
 		end
-		if (GetDistance(target) >= 350 or (not FrozenBuff(target) and not EREADY and WREADY)) and SejuaniMenu.combo.useQ then
+		if (GetDistance(target) >= 250 or (not FrozenBuff(target) and not EREADY and WREADY)) and SejuaniMenu.combo.useQ then
 			CastQ(target)
 		end
 		if (not WActive or GetDistance(target) >= 350) and FrozenBuff(target) and SejuaniMenu.combo.useE then
@@ -389,7 +389,7 @@ function Combo(target)
 		    if GetDistance(target) <= AARange + 55 or (QCooldow < 0.5 and GetDistance(target) < Ranges.Q) then
 			    CastW(target)
 			end
-			if GetDistance(target) >= 350 and SejuaniMenu.combo.useQ then
+			if GetDistance(target) >= 250 and SejuaniMenu.combo.useQ then
 			    CastQ(target)
 			end
 			if (not WActive or GetDistance(target) >= 350) and FrozenBuff(target) and SejuaniMenu.combo.useE then
@@ -931,7 +931,7 @@ function AutoR()
                 if DelayR ~= nil then				
 					local CastPosition, HitChance, Position = VP:GetLineCastPosition(enemy, DelayR, Widths.R, RangeR, Speeds.R, myHero, false)	
 					
-					local RAngle = 180 * math.pi / 180
+					local RAngle = 240 * math.pi / 180
 					local points = {}
 					
 					local function CountVectorsBetween(V1, V2, Vectors)
@@ -950,7 +950,7 @@ function AutoR()
 					    if enemyx.networkID ~= enemy.networkID and ValidTarget(enemyx,Ranges.R * 1.5) and CastPosition then
 							local PredictedPos = VP:GetPredictedPos(enemyx, DelayR)
 							if GetDistance(CastPosition, PredictedPos) < Widths.R2 and GetDistance(CastPosition, enemyx) < Widths.R2 then
-							    table.insert(points, Vector(PredictedPos.x - myHero.x, 0, PredictedPos.z - myHero.z))
+							    table.insert(points, Vector(PredictedPos.x - CastPosition.x, 0, PredictedPos.z - CastPosition.z))
 							end
 						end
 					end
@@ -958,7 +958,7 @@ function AutoR()
 					local MaxHit = 1
 					
 					if #points >= 1 then
-						local Direction = Widths.R2 * (-Vector(myHero.x, 0, myHero.z) + Vector(CastPosition.x, 0, CastPosition.z)):normalized()
+						local Direction = (Vector(myHero.x, 0, myHero.z) + Vector(CastPosition.x, 0, CastPosition.z)):normalized() * Widths.R2 
 						local Vector1 = Direction:rotated(0, RAngle / 2, 0)
 						local Vector2 = Direction:rotated(0, -RAngle / 2, 0)
 						MaxHit = CountVectorsBetween(Vector1, Vector2, points)
@@ -977,6 +977,7 @@ function AutoR()
 									        end
 								        else
 								            CastSpell(_R, CastPosition.x, CastPosition.z)
+											print("OK")
                                         end
 									end
 								end
