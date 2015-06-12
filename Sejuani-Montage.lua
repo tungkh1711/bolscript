@@ -1,6 +1,6 @@
 if myHero.charName ~= "Sejuani" then return end
 
-local version = 0.16
+local version = 0.17
 local Author = "Tungkh1711"
 local UPDATE_NAME = "Sejuani-Montage"
 local UPDATE_HOST = "raw.github.com"
@@ -929,40 +929,16 @@ function AutoR()
 					UseQR = true
                 end	
                 if DelayR ~= nil then				
-					local CastPosition, HitChance, Position = VP:GetLineCastPosition(enemy, DelayR, Widths.R, RangeR, Speeds.R, myHero, false)	
-					
-					local RAngle = 240 * math.pi / 180
-					local points = {}
-					
-					local function CountVectorsBetween(V1, V2, Vectors)
-						local result = 1       
-						for i, test in ipairs(Vectors) do
-							local NVector = Vector(V1):crossP(test)
-							local NVector2 = Vector(test):crossP(V2)
-							if NVector.y >= 0 and NVector2.y >= 0 then
-								result = result + 1
-			                end
-						end
-		                return result
-	                end
-					
+					local CastPosition, HitChance, Position = VP:GetLineCastPosition(enemy, DelayR, Widths.R, RangeR, Speeds.R, myHero, false)						
+					local MaxHit = 1
 					for j, enemyx in ipairs(GetEnemyHeroes()) do
 					    if enemyx.networkID ~= enemy.networkID and ValidTarget(enemyx,Ranges.R * 1.5) and CastPosition then
 							local PredictedPos = VP:GetPredictedPos(enemyx, DelayR)
 							if GetDistance(CastPosition, PredictedPos) < Widths.R2 and GetDistance(CastPosition, enemyx) < Widths.R2 then
-							    table.insert(points, Vector(PredictedPos.x - CastPosition.x, 0, PredictedPos.z - CastPosition.z))
+							    MaxHit = MaxHit + 1
 							end
 						end
-					end
-					
-					local MaxHit = 1
-					
-					if #points >= 1 then
-						local Direction = Vector(CastPosition.x, 0, CastPosition.z) + (Vector(myHero.x, 0, myHero.z) - Vector(CastPosition.x, 0, CastPosition.z)):normalized() * Widths.R2 
-						local Vector1 = Direction:rotated(0, RAngle / 2, 0)
-						local Vector2 = Direction:rotated(0, -RAngle / 2, 0)
-						MaxHit = CountVectorsBetween(Vector1, Vector2, points)
-					end
+					end								
 					
 					if CastPosition and HitChance >= VPHitChance and MaxHit >= SejuaniMenu.advanced.skillR.xEnemies then
 					    for k, enemyy in ipairs(GetEnemyHeroes()) do
@@ -1177,4 +1153,228 @@ class 'PointT' -- {
         return {}
     end
 
-    function PointT:perpendicularFoot(line
+    function PointT:perpendicularFoot(line)
+        local distanceFromLine = line:distance(self)
+        local normalVector = line:normal():normalized()
+
+        local footOfPerpendicular = self + normalVector * distanceFromLine
+        if line:distance(footOfPerpendicular) > distanceFromLine then
+            footOfPerpendicular = self - normalVector * distanceFromLine
+        end
+
+        return footOfPerpendicular
+    end
+
+    function PointT:contains(spatialObject)
+        if spatialObject:__type() == "Line2" then
+            return false
+        elseif spatialObject:__type() == "Circle2" then
+            return spatialObject.point == self and spatialObject.radius == 0
+        else
+        for i, point in ipairs(spatialObject:getPoints()) do
+            if point ~= self then
+                return false
+            end
+        end
+    end
+
+        return true
+    end
+
+    function PointT:polar()
+        if math.close(self.x, 0) then
+            if self.y > 0 then return 90
+            elseif self.y < 0 then return 270
+            else return 0
+            end
+        else
+            local theta = math.deg(math.atan(self.y / self.x))
+            if self.x < 0 then theta = theta + 180 end
+            if theta < 0 then theta = theta + 360 end
+            return theta
+        end
+    end
+
+    function PointT:insideOf(spatialObject)
+        return spatialObject.contains(self)
+    end
+
+    function PointT:distance(spatialObject)
+        if spatialObject:__type() == "PointT" then
+            return math.sqrt((self.x - spatialObject.x)^2 + (self.y - spatialObject.y)^2)
+        elseif spatialObject:__type() == "Line2" then
+            denominator = (spatialObject.points[2].x - spatialObject.points[1].x)
+            if denominator == 0 then
+                return math.abs(self.x - spatialObject.points[2].x)
+            end
+
+            m = (spatialObject.points[2].y - spatialObject.points[1].y) / denominator
+
+            return math.abs((m * self.x - self.y + (spatialObject.points[1].y - m * spatialObject.points[1].x)) / math.sqrt(m * m + 1))
+        elseif spatialObject:__type() == "Circle2" then
+            return self:distance(spatialObject.point) - spatialObject.radius
+        elseif spatialObject:__type() == "LineSegment2" then
+            local t = ((self.x - spatialObject.points[1].x) * (spatialObject.points[2].x - spatialObject.points[1].x) + (self.y - spatialObject.points[1].y) * (spatialObject.points[2].y - spatialObject.points[1].y)) / ((spatialObject.points[2].x - spatialObject.points[1].x)^2 + (spatialObject.points[2].y - spatialObject.points[1].y)^2)
+
+            if t <= 0.0 then
+                return self:distance(spatialObject.points[1])
+            elseif t >= 1.0 then
+                return self:distance(spatialObject.points[2])
+            else
+                return self:distance(Line2(spatialObject.points[1], spatialObject.points[2]))
+            end
+        else
+            local minDistance = nil
+
+            for i, lineSegment in ipairs(spatialObject:getLineSegments()) do
+                if minDistance == nil then
+                    minDistance = self:distance(lineSegment)
+                else
+                    minDistance = math.min(minDistance, self:distance(lineSegment))
+                end
+            end
+
+            return minDistance
+        end
+    end
+-- }
+
+--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~--
+----------------------------------------
+class "ScriptUpdate"
+function ScriptUpdate:__init(LocalVersion,UseHttps, Host, VersionPath, ScriptPath, SavePath, CallbackUpdate, CallbackNoUpdate, CallbackNewVersion,CallbackError)
+    self.LocalVersion = LocalVersion
+    self.Host = Host
+    self.VersionPath = '/BoL/TCPUpdater/GetScript'..(UseHttps and '3' or '4')..'.php?script='..self:Base64Encode(self.Host..VersionPath)..'&rand='..math.random(99999999)
+    self.ScriptPath = '/BoL/TCPUpdater/GetScript'..(UseHttps and '3' or '4')..'.php?script='..self:Base64Encode(self.Host..ScriptPath)..'&rand='..math.random(99999999)
+    self.SavePath = SavePath
+    self.CallbackUpdate = CallbackUpdate
+    self.CallbackNoUpdate = CallbackNoUpdate
+    self.CallbackNewVersion = CallbackNewVersion
+    self.CallbackError = CallbackError
+    self:CreateSocket(self.VersionPath)
+    self.DownloadStatus = 'Connect to Server for VersionInfo'
+    AddTickCallback(function() self:GetOnlineVersion() end)
+end
+
+function ScriptUpdate:CreateSocket(url)
+    if not self.LuaSocket then
+        self.LuaSocket = require("socket")
+    else
+        self.Socket:close()
+        self.Socket = nil
+        self.Size = nil
+        self.RecvStarted = false
+    end
+    self.LuaSocket = require("socket")
+    self.Socket = self.LuaSocket.tcp()
+    self.Socket:settimeout(0, 'b')
+    self.Socket:settimeout(99999999, 't')
+    self.Socket:connect('sx-bol.eu', 80)
+    self.Url = url
+    self.Started = false
+    self.LastPrint = ""
+    self.File = ""
+end
+
+function ScriptUpdate:Base64Encode(data)
+    local b='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+    return ((data:gsub('.', function(x)
+        local r,b='',x:byte()
+        for i=8,1,-1 do r=r..(b%2^i-b%2^(i-1)>0 and '1' or '0') end
+        return r;
+    end)..'0000'):gsub('%d%d%d?%d?%d?%d?', function(x)
+        if (#x < 6) then return '' end
+        local c=0
+        for i=1,6 do c=c+(x:sub(i,i)=='1' and 2^(6-i) or 0) end
+        return b:sub(c+1,c+1)
+    end)..({ '', '==', '=' })[#data%3+1])
+end
+
+function ScriptUpdate:GetOnlineVersion()
+    if self.GotScriptVersion then return end
+
+    self.Receive, self.Status, self.Snipped = self.Socket:receive(1024)
+    if self.Status == 'timeout' and not self.Started then
+        self.Started = true
+        self.Socket:send("GET "..self.Url.." HTTP/1.1\r\nHost: sx-bol.eu\r\n\r\n")
+    end
+    if (self.Receive or (#self.Snipped > 0)) and not self.RecvStarted then
+        self.RecvStarted = true
+        local recv,sent,time = self.Socket:getstats()
+        self.DownloadStatus = 'Downloading VersionInfo (0%)'
+    end
+
+    self.File = self.File .. (self.Receive or self.Snipped)
+    if self.File:find('</size>') then
+        if not self.Size then
+            self.Size = tonumber(self.File:sub(self.File:find('<si'..'ze>')+6,self.File:find('</s'..'ize>')-1)) + self.File:len()
+        end
+        self.DownloadStatus = 'Downloading VersionInfo ('..math.round(100/self.Size*self.File:len(),2)..'%)'
+    end
+    if not (self.Receive or (#self.Snipped > 0)) and self.RecvStarted and self.Size and math.round(100/self.Size*self.File:len(),2) > 95 then
+        self.DownloadStatus = 'Downloading VersionInfo (100%)'
+        local HeaderEnd, ContentStart = self.File:find('<scr'..'ipt>')
+        local ContentEnd, _ = self.File:find('</sc'..'ript>')
+        if not ContentStart or not ContentEnd then
+            if self.CallbackError and type(self.CallbackError) == 'function' then
+                self.CallbackError()
+            end
+        else
+            self.OnlineVersion = tonumber(self.File:sub(ContentStart + 1,ContentEnd-1))
+            if self.OnlineVersion > self.LocalVersion then
+                if self.CallbackNewVersion and type(self.CallbackNewVersion) == 'function' then
+                    self.CallbackNewVersion(self.OnlineVersion,self.LocalVersion)
+                end
+                self:CreateSocket(self.ScriptPath)
+                self.DownloadStatus = 'Connect to Server for ScriptDownload'
+                AddTickCallback(function() self:DownloadUpdate() end)
+            else
+                if self.CallbackNoUpdate and type(self.CallbackNoUpdate) == 'function' then
+                    self.CallbackNoUpdate(self.LocalVersion)
+                end
+            end
+        end
+        self.GotScriptVersion = true
+    end
+end
+
+function ScriptUpdate:DownloadUpdate()
+    if self.GotScriptUpdate then return end
+    self.Receive, self.Status, self.Snipped = self.Socket:receive(1024)
+    if self.Status == 'timeout' and not self.Started then
+        self.Started = true
+        self.Socket:send("GET "..self.Url.." HTTP/1.1\r\nHost: sx-bol.eu\r\n\r\n")
+    end
+    if (self.Receive or (#self.Snipped > 0)) and not self.RecvStarted then
+        self.RecvStarted = true
+        local recv,sent,time = self.Socket:getstats()
+        self.DownloadStatus = 'Downloading Script (0%)'
+    end
+
+    self.File = self.File .. (self.Receive or self.Snipped)
+    if self.File:find('</si'..'ze>') then
+        if not self.Size then
+            self.Size = tonumber(self.File:sub(self.File:find('<si'..'ze>')+6,self.File:find('</si'..'ze>')-1)) + self.File:len()
+        end
+        self.DownloadStatus = 'Downloading Script ('..math.round(100/self.Size*self.File:len(),2)..'%)'
+    end
+    if not (self.Receive or (#self.Snipped > 0)) and self.RecvStarted and math.round(100/self.Size*self.File:len(),2) > 95 then
+        self.DownloadStatus = 'Downloading Script (100%)'
+        local HeaderEnd, ContentStart = self.File:find('<sc'..'ript>')
+        local ContentEnd, _ = self.File:find('</scr'..'ipt>')
+        if not ContentStart or not ContentEnd then
+            if self.CallbackError and type(self.CallbackError) == 'function' then
+                self.CallbackError()
+            end
+        else
+            local f = io.open(self.SavePath,"w+b")
+            f:write(self.File:sub(ContentStart + 1,ContentEnd-1))
+            f:close()
+            if self.CallbackUpdate and type(self.CallbackUpdate) == 'function' then
+                self.CallbackUpdate(self.OnlineVersion,self.LocalVersion)
+            end
+        end
+        self.GotScriptUpdate = true
+    end
+end
