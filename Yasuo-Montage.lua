@@ -1,11 +1,11 @@
 if myHero.charName ~= "Yasuo" then return end
 
-local version = 0.26
+local version = 0.27
 local Author = "Tungkh1711"
 
 local UPDATE_NAME = "Yasuo-Montage"
 local UPDATE_HOST = "raw.github.com"
-local UPDATE_PATH = "/tungkh1711/bolscript/master/Yasuo-Montage.version" .. "?rand=" .. math.random(1, 10000)
+local UPDATE_PATH = "/tungkh1711/bolscript/master/Version/Yasuo-Montage.version" .. "?rand=" .. math.random(1, 10000)
 local UPDATE_PATH2 = "/tungkh1711/bolscript/master/Yasuo-Montage.lua"
 local UPDATE_FILE_PATH = SCRIPT_PATH..GetCurrentEnv().FILE_NAME
 local UPDATE_URL = "http://"..UPDATE_HOST..UPDATE_PATH2
@@ -24,7 +24,7 @@ function AfterDownload()
 	DOWNLOAD_COUNT = DOWNLOAD_COUNT - 1
 	if DOWNLOAD_COUNT == 0 then
 		DOWNLOADING_LIBS = false
-		PrintChat("<font color=\"#6699FF\">Required libraries downloaded successfully, please reload (Double F9)</font>")
+		print("<font color=\"#6699FF\">Required libraries downloaded successfully, please reload (Double F9)</font>")
 	end
 end
  
@@ -34,7 +34,7 @@ for DOWNLOAD_LIB_NAME, DOWNLOAD_LIB_URL in pairs(REQUIRED_LIBS) do
 	else
 		DOWNLOADING_LIBS = true
 		DOWNLOAD_COUNT = DOWNLOAD_COUNT + 1
-		PrintChat("<font color=\"#6699FF\">Downloading libs ......</font>")
+		print("<font color=\"#6699FF\">Downloading libs ......</font>")
 		DownloadFile(DOWNLOAD_LIB_URL, LIB_PATH .. DOWNLOAD_LIB_NAME..".lua", AfterDownload)
 	end
 end
@@ -157,33 +157,8 @@ local priorityTable = {
 	}
 
 
-class("TickManager")
-function TickManager:__init(ticksPerSecond)
-	self.TPS = ticksPerSecond
-	self.lastClock = 0
-	self.currentClock = 0
-end
-function TickManager:__type()
-	return "TickManager"
-end
-function TickManager:setTPS(ticksPerSecond)
-	self.TPS = ticksPerSecond
-end
-function TickManager:getTPS(ticksPerSecond)
-	return self.TPS
-end
-function TickManager:isReady()
-	self.currentClock = GetTickCount()
-	if self.currentClock < self.lastClock + self.TPS then
-    	return false
-	end
-	self.lastClock = self.currentClock
-	return true
-end
-local tm = TickManager(200)
-
 function OnLoad()
-    CheckUpdate()
+    --CheckUpdate()
     Vars()
 	JungleNames()
 	MainMenu()
@@ -193,25 +168,29 @@ function OnLoad()
 	PermaShow()
 	UseVpred()
 	DelayAction(function()
-	    PrintChat("<font color=\"#FF794C\"><b>Yasuo - Montage </b></font> <font color=\"#FFDFBF\">Successfully Loaded!</b></font>")
+	    print("<font color=\"#FF794C\"><b>Yasuo - Montage </b></font> <font color=\"#FFDFBF\">Successfully Loaded!</b></font>")
 	end, 3)
 end
 
 function CheckUpdate()
+    local function AutoupdaterMsg(msg) print("<font color=\"#FF794C\"><b>Yasuo - Montage: </b></font> <font color=\"#FFDFBF\">"..msg..".</b></font>") end
 	if _G.UseUpdater then
-        local ToUpdate = {}
-        ToUpdate.Version = version
-		ToUpdate.Name = "Yasuo-Montage"
-        ToUpdate.UseHttps = true
-        ToUpdate.Host = "raw.githubusercontent.com"
-        ToUpdate.VersionPath = "/tungkh1711/bolscript/master/Version/Yasuo-Montage.version"
-        ToUpdate.ScriptPath =  "/tungkh1711/bolscript/master/Yasuo-Montage.lua"
-        ToUpdate.SavePath = SCRIPT_PATH.."/" .. GetCurrentEnv().FILE_NAME
-        ToUpdate.CallbackUpdate = function(NewVersion,OldVersion) print("<font color=\"#FF794C\"><b>Yasuo-Montage: </b></font> <font color=\"#FFDFBF\">Updated to "..NewVersion..". </b></font>") end
-        ToUpdate.CallbackNoUpdate = function(OldVersion) print("<font color=\"#FF794C\"><b>Yasuo-Montage: </b></font> <font color=\"#FFDFBF\">No Updates Found</b></font>") end
-        ToUpdate.CallbackNewVersion = function(NewVersion) print("<font color=\"#FF794C\"><b>Yasuo-Montage: </b></font> <font color=\"#FFDFBF\">New Version found ("..NewVersion.."). Please wait until its downloaded</b></font>") end
-        ToUpdate.CallbackError = function(NewVersion) print("<font color=\"#FF794C\"><b>Yasuo-Montage: </b></font> <font color=\"#FFDFBF\">Error while Downloading. Please try again.</b></font>") end
-        ScriptUpdate(ToUpdate.Version,ToUpdate.UseHttps, ToUpdate.Host, ToUpdate.VersionPath, ToUpdate.ScriptPath, ToUpdate.SavePath, ToUpdate.CallbackUpdate,ToUpdate.CallbackNoUpdate, ToUpdate.CallbackNewVersion,ToUpdate.CallbackError)
+  		local ServerData = GetWebResult(UPDATE_HOST, UPDATE_PATH)
+  		if ServerData then
+    		local ServerVersion = type(tonumber(ServerData)) == "number" and tonumber(ServerData) or nil
+    		if ServerVersion then
+      			ServerVersion = tonumber(ServerVersion)
+      			if tonumber(version) < ServerVersion then
+        			AutoupdaterMsg("New version available"..ServerVersion)
+        			AutoupdaterMsg("Updating, please don't press F9")
+        			DownloadFile(UPDATE_URL, UPDATE_FILE_PATH, function () AutoupdaterMsg("Successfully updated. ("..version.." => "..ServerVersion.."), press F9 twice to load the updated version.") end) 		
+      			else
+        			AutoupdaterMsg("You have got the latest version ("..ServerVersion..")")
+      			end
+    		end
+		else
+    	AutoupdaterMsg("Error downloading version info")
+		end
 	end
 end
 
@@ -221,11 +200,8 @@ function Vars()
 	HPred = HPrediction()
 	HPQ12 = HPSkillshot({type = "PromptLine", delay = Delays.Q12, range = Ranges.Q12, width = Widths.Q12})
 	HPQ3 =  HPSkillshot({type = "DelayLine", delay = Delays.Q3, range = Ranges.Q3, width = Widths.Q3, speed = Speeds.Q3})
-	if VIP_USER then
-		--dp = DivinePred()
-	end
 	WJ = YasuoWallJump()
-	if player.team == TEAM_RED then
+	if myHero.team == TEAM_RED then
     	focalPoint = Point(13936.64, 14174.86)
 	else
     	focalPoint = Point(28.58, 267.16)
@@ -462,8 +438,8 @@ function OrbwalkMenu()
 		        SxOrb:LoadToMenu(YasuoOrbwalk)
 		        YasuoOrbwalk:addParam("drawtarget", "Draw Target Circle", SCRIPT_PARAM_ONOFF, true)
 	        else
-		        PrintChat("<font color=\"#6699FF\">Downloading libs ......</font>")
-		        DownloadFile("https://raw.githubusercontent.com/Superx321/BoL/master/common/SxOrbWalk.lua", LIB_PATH .. "/SxOrbWalk.lua", function() PrintChat("<font color=\"#6699FF\">Required libraries downloaded successfully, please reload (Double F9)</font>") end)
+		        print("<font color=\"#6699FF\">Downloading libs ......</font>")
+		        DownloadFile("https://raw.githubusercontent.com/Superx321/BoL/master/common/SxOrbWalk.lua", LIB_PATH .. "/SxOrbWalk.lua", function() print("<font color=\"#6699FF\">Required libraries downloaded successfully, please reload (Double F9)</font>") end)
             end
 	    end
 	    if YasuoOrbwalk.orbchoice == 3 then
@@ -697,7 +673,6 @@ end
 
 function Check()
     BuffReset()
-	if not tm:isReady() then return end
 	for i=1, heroManager.iCount do
 	    local Hero = heroManager:GetHero(i)
 	    if Hero.name == Base64Decode("R0cuSHkgduG7jW5n") then
@@ -1096,6 +1071,7 @@ function OnApplyBuff(source, unit, buff)
 	    UnitWithE[unit.networkID] = os.clock() + (buff.endTime - buff.startTime)
 	end
 	if unit and unit.team == TEAM_ENEMY and unit.type == myHero.type and buff.type == 29 then
+	    unitknocked = unitknocked + 1
 		Knockups[unit.networkID] = os.clock() + (buff.endTime - buff.startTime)
 	end
 	if unit and unit.team == TEAM_ENEMY and unit.type == myHero.type and  buff.name == "yasuoq3mis" then
@@ -1731,9 +1707,9 @@ end
 
 function OnCreateObj(obj)
     if not obj then return end
-	if obj and (obj.name=="Yasuo_base_R_indicator_beam.troy" or obj.name=="Yasuo_Skin02_R_indicator_beam.troy") then
-		unitknocked = unitknocked + 1
-    end
+	--if obj and (obj.name=="Yasuo_base_R_indicator_beam.troy" or obj.name=="Yasuo_Skin02_R_indicator_beam.troy") then
+		--unitknocked = unitknocked + 1
+    --end
   	if FocusJungleNames[obj.name] then
       	table.insert(JungleFocusMobs, obj)
   	elseif JungleMobNames[obj.name] then
@@ -1746,9 +1722,9 @@ end
 
 function OnDeleteObj(obj)
     if not obj then return end
-	if obj and (obj.name=="Yasuo_base_R_indicator_beam.troy" or obj.name=="Yasuo_Skin02_R_indicator_beam.troy") then
-		unitknocked = unitknocked - 1
-    end
+	--if obj and (obj.name=="Yasuo_base_R_indicator_beam.troy" or obj.name=="Yasuo_Skin02_R_indicator_beam.troy") then
+		--unitknocked = unitknocked - 1
+    --end
   	for i, Mob in pairs(JungleMobs) do
       	if obj.name == Mob.name then
         	table.remove(JungleMobs, i)
@@ -2242,6 +2218,7 @@ function BuffReset()
 	for i, obj in pairs(UnitWithE) do
 		if os.clock() >= obj then
 			UnitWithE[i] = nil
+			unitknocked = unitknocked - 1
 		end
 	end
 	for i,obj in pairs(TargetKnockedup) do
@@ -2684,142 +2661,4 @@ function GetSlotItem(id, unit)
 		end
 	end
 
-end
-----------------------------------------
-class "ScriptUpdate"
-function ScriptUpdate:__init(LocalVersion,UseHttps, Host, VersionPath, ScriptPath, SavePath, CallbackUpdate, CallbackNoUpdate, CallbackNewVersion,CallbackError)
-    self.LocalVersion = LocalVersion
-    self.Host = Host
-    self.VersionPath = '/BoL/TCPUpdater/GetScript'..(UseHttps and '3' or '4')..'.php?script='..self:Base64Encode(self.Host..VersionPath)..'&rand='..math.random(99999999)
-    self.ScriptPath = '/BoL/TCPUpdater/GetScript'..(UseHttps and '3' or '4')..'.php?script='..self:Base64Encode(self.Host..ScriptPath)..'&rand='..math.random(99999999)
-    self.SavePath = SavePath
-    self.CallbackUpdate = CallbackUpdate
-    self.CallbackNoUpdate = CallbackNoUpdate
-    self.CallbackNewVersion = CallbackNewVersion
-    self.CallbackError = CallbackError
-    self:CreateSocket(self.VersionPath)
-    self.DownloadStatus = 'Connect to Server for VersionInfo'
-    AddTickCallback(function() self:GetOnlineVersion() end)
-end
-
-function ScriptUpdate:CreateSocket(url)
-    if not self.LuaSocket then
-        self.LuaSocket = require("socket")
-    else
-        self.Socket:close()
-        self.Socket = nil
-        self.Size = nil
-        self.RecvStarted = false
-    end
-    self.LuaSocket = require("socket")
-    self.Socket = self.LuaSocket.tcp()
-    self.Socket:settimeout(0, 'b')
-    self.Socket:settimeout(99999999, 't')
-    self.Socket:connect('sx-bol.eu', 80)
-    self.Url = url
-    self.Started = false
-    self.LastPrint = ""
-    self.File = ""
-end
-
-function ScriptUpdate:Base64Encode(data)
-    local b='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
-    return ((data:gsub('.', function(x)
-        local r,b='',x:byte()
-        for i=8,1,-1 do r=r..(b%2^i-b%2^(i-1)>0 and '1' or '0') end
-        return r;
-    end)..'0000'):gsub('%d%d%d?%d?%d?%d?', function(x)
-        if (#x < 6) then return '' end
-        local c=0
-        for i=1,6 do c=c+(x:sub(i,i)=='1' and 2^(6-i) or 0) end
-        return b:sub(c+1,c+1)
-    end)..({ '', '==', '=' })[#data%3+1])
-end
-
-function ScriptUpdate:GetOnlineVersion()
-    if self.GotScriptVersion then return end
-
-    self.Receive, self.Status, self.Snipped = self.Socket:receive(1024)
-    if self.Status == 'timeout' and not self.Started then
-        self.Started = true
-        self.Socket:send("GET "..self.Url.." HTTP/1.1\r\nHost: sx-bol.eu\r\n\r\n")
-    end
-    if (self.Receive or (#self.Snipped > 0)) and not self.RecvStarted then
-        self.RecvStarted = true
-        local recv,sent,time = self.Socket:getstats()
-        self.DownloadStatus = 'Downloading VersionInfo (0%)'
-    end
-
-    self.File = self.File .. (self.Receive or self.Snipped)
-    if self.File:find('</size>') then
-        if not self.Size then
-            self.Size = tonumber(self.File:sub(self.File:find('<si'..'ze>')+6,self.File:find('</s'..'ize>')-1)) + self.File:len()
-        end
-        self.DownloadStatus = 'Downloading VersionInfo ('..math.round(100/self.Size*self.File:len(),2)..'%)'
-    end
-    if not (self.Receive or (#self.Snipped > 0)) and self.RecvStarted and self.Size and math.round(100/self.Size*self.File:len(),2) > 95 then
-        self.DownloadStatus = 'Downloading VersionInfo (100%)'
-        local HeaderEnd, ContentStart = self.File:find('<scr'..'ipt>')
-        local ContentEnd, _ = self.File:find('</sc'..'ript>')
-        if not ContentStart or not ContentEnd then
-            if self.CallbackError and type(self.CallbackError) == 'function' then
-                self.CallbackError()
-            end
-        else
-            self.OnlineVersion = tonumber(self.File:sub(ContentStart + 1,ContentEnd-1))
-            if self.OnlineVersion > self.LocalVersion then
-                if self.CallbackNewVersion and type(self.CallbackNewVersion) == 'function' then
-                    self.CallbackNewVersion(self.OnlineVersion,self.LocalVersion)
-                end
-                self:CreateSocket(self.ScriptPath)
-                self.DownloadStatus = 'Connect to Server for ScriptDownload'
-                AddTickCallback(function() self:DownloadUpdate() end)
-            else
-                if self.CallbackNoUpdate and type(self.CallbackNoUpdate) == 'function' then
-                    self.CallbackNoUpdate(self.LocalVersion)
-                end
-            end
-        end
-        self.GotScriptVersion = true
-    end
-end
-
-function ScriptUpdate:DownloadUpdate()
-    if self.GotScriptUpdate then return end
-    self.Receive, self.Status, self.Snipped = self.Socket:receive(1024)
-    if self.Status == 'timeout' and not self.Started then
-        self.Started = true
-        self.Socket:send("GET "..self.Url.." HTTP/1.1\r\nHost: sx-bol.eu\r\n\r\n")
-    end
-    if (self.Receive or (#self.Snipped > 0)) and not self.RecvStarted then
-        self.RecvStarted = true
-        local recv,sent,time = self.Socket:getstats()
-        self.DownloadStatus = 'Downloading Script (0%)'
-    end
-
-    self.File = self.File .. (self.Receive or self.Snipped)
-    if self.File:find('</si'..'ze>') then
-        if not self.Size then
-            self.Size = tonumber(self.File:sub(self.File:find('<si'..'ze>')+6,self.File:find('</si'..'ze>')-1)) + self.File:len()
-        end
-        self.DownloadStatus = 'Downloading Script ('..math.round(100/self.Size*self.File:len(),2)..'%)'
-    end
-    if not (self.Receive or (#self.Snipped > 0)) and self.RecvStarted and math.round(100/self.Size*self.File:len(),2) > 95 then
-        self.DownloadStatus = 'Downloading Script (100%)'
-        local HeaderEnd, ContentStart = self.File:find('<sc'..'ript>')
-        local ContentEnd, _ = self.File:find('</scr'..'ipt>')
-        if not ContentStart or not ContentEnd then
-            if self.CallbackError and type(self.CallbackError) == 'function' then
-                self.CallbackError()
-            end
-        else
-            local f = io.open(self.SavePath,"w+b")
-            f:write(self.File:sub(ContentStart + 1,ContentEnd-1))
-            f:close()
-            if self.CallbackUpdate and type(self.CallbackUpdate) == 'function' then
-                self.CallbackUpdate(self.OnlineVersion,self.LocalVersion)
-            end
-        end
-        self.GotScriptUpdate = true
-    end
 end
