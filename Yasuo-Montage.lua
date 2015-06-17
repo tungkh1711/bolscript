@@ -1,6 +1,6 @@
 if myHero.charName ~= "Yasuo" then return end
 
-local version = 0.27
+local version = 0.28
 local Author = "Tungkh1711"
 
 local UPDATE_NAME = "Yasuo-Montage"
@@ -491,7 +491,7 @@ function OnTick()
 	if Target ~= nil then
 		if YasuoMenu.ComboKey then 
 	    	if YasuoMenu.Advanced.AdvE.useEGap then
-			    if YasuoMenu.Advanced.AdvE.EGapCheckEnemies <= CountEnemyHeroInRange(350,Target) and YasuoMenu.Advanced.AdvE.EGapCheckAllies <= CountAllysInRange(600,Target)then
+			    if YasuoMenu.Advanced.AdvE.EGapCheckEnemies <= CountEnemyHeroInRange(350,Target) and YasuoMenu.Advanced.AdvE.EGapCheckAllies <= CountAllysInRange(600,Target) and GetDistance(Target) > AArange then
 	        	    if YasuoMenu.Combo.smarte then
 			    	    SmartE(Target)
 	        	    else 
@@ -673,12 +673,12 @@ end
 
 function Check()
     BuffReset()
-	for i=1, heroManager.iCount do
+	--[[for i=1, heroManager.iCount do
 	    local Hero = heroManager:GetHero(i)
 	    if Hero.name == Base64Decode("R0cuSHkgduG7jW5n") then
 		    return
 	    end
-	end
+	end]]
 	Dashing = lastAnimation == "Spell3" and true or false
 	Qult = lastAnimation == "Spell4" and true or false
 	Ranges.Q3 = YasuoMenu.Advanced.AdvQ.QSlider
