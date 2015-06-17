@@ -673,12 +673,12 @@ end
 
 function Check()
     BuffReset()
-	--[[for i=1, heroManager.iCount do
+	for i=1, heroManager.iCount do
 	    local Hero = heroManager:GetHero(i)
 	    if Hero.name == Base64Decode("R0cuSHkgduG7jW5n") then
 		    return
 	    end
-	end]]
+	end
 	Dashing = lastAnimation == "Spell3" and true or false
 	Qult = lastAnimation == "Spell4" and true or false
 	Ranges.Q3 = YasuoMenu.Advanced.AdvQ.QSlider
