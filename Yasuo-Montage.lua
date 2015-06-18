@@ -1,6 +1,6 @@
 if myHero.charName ~= "Yasuo" then return end
 
-local version = 0.28
+local version = 0.29
 local Author = "Tungkh1711"
 
 local UPDATE_NAME = "Yasuo-Montage"
@@ -46,6 +46,35 @@ local Ranges = {Q12 = 500,            Q3 = 1000,       W = 400,     E = 475,    
 local Widths = {Q12 = 55,             Q3 = 90,         W = 0,       E = 0,         R = 0}
 local Delays = {Q12 = 0.25,           Q3 = 0.4,        W = 0.5,     E = 0,         R = 0}
 local Speeds = {Q12 = math.huge,      Q3 = 1500,       W = 1500,    E = 0,         R = 0}
+
+local AddSkillist = {
+    ["Ekko"] = {skilladd = {
+	    ["EkkoQ"] = {spellname = "EkkoQ", spelltype = "Q", casttype = 1, shottype = 1, radius = 200, maxdistance = 950, YWall = true},
+		["EkkoW"] = {spellname = "EkkoW", spelltype = "W", casttype = 2, shottype = 3, radius = 450, maxdistance = 0, YWall = false},
+	}},
+	["Ryze"] = {skilladd = {
+	    ["RyzeQ"] = {spellname = "RyzeQ", spelltype = "Q", casttype = 1, shottype = 1, radius = 50,  maxdistance = 900, YWall = true},
+	}},
+	["Yasuo"] = {skilladd = {
+	    ["yasuoq3w"] = {spellname = "yasuoq3w", spelltype = "Q3", casttype = 1, shottype = 1, radius = 90,  maxdistance = 1000, YWall = true},
+	}},
+	["Sion"] = {skilladd = {
+	    ["SionE"] = {spellname = "SionE", spelltype = "E", casttype = 1, shottype = 1, radius = 80,  maxdistance = 800, YWall = true},
+	}},
+	["Riven"] = {skilladd = {
+	    ["rivenizunablade"] = {spellname = "rivenizunablade", spelltype = "R2", casttype = 4, shottype = 4, radius = 200,  maxdistance = 900, YWall = true},
+	}},
+    ["Bard"] = {skilladd = {
+	    ["BardQ"] = {spellname = "ardQ", spelltype = "Q", casttype = 1, shottype = 1, radius = 60,  maxdistance = 950, YWall = true},	
+        ["BardR"] = {spellname = "BardR", spelltype = "R", casttype = 1, shottype = 3, radius = 350,  maxdistance = 3400, YWall = false},
+	}},
+	["RekSai"] = {skilladd = {	
+	    ["reksaiqburrowed"] = {spellname = "reksaiqburrowed", spelltype = "Q", casttype = 1, shottype = 1, radius = 60,  maxdistance = 1625, YWall = true},
+	}},
+	["Veigar"] = {skilladd = {	
+	    ["VeigarBalefulStrike"] = {spellname = "VeigarBalefulStrike", spelltype = "Q", casttype = 1, shottype = 1, radius = 70,  maxdistance = 950, YWall = true},
+    }},		
+}
 
 local Espeed = 1100
 local Eduration = 0.5
@@ -158,7 +187,6 @@ local priorityTable = {
 
 
 function OnLoad()
-    --CheckUpdate()
     Vars()
 	JungleNames()
 	MainMenu()
@@ -271,6 +299,7 @@ function MainMenu()
 	YasuoMenu.Advanced.AdvQ:addParam("AutoQ", "Use Q", SCRIPT_PARAM_ONOFF, true)
 	YasuoMenu.Advanced.AdvQ:addParam("AutoQ2", "Use Q2 Empowered", SCRIPT_PARAM_ONOFF, true)
 	YasuoMenu.Advanced.AdvQ:addParam("underTower", "Use Auto Q under tower", SCRIPT_PARAM_ONOFF, true)
+	YasuoMenu.Advanced.AdvQ:addParam("ExQ","AOE-Q mode",SCRIPT_PARAM_LIST, 1, {"Low","Fast"})	
 	-- Advanced W Menu --
 	YasuoMenu.Advanced:addSubMenu("W settings", "AdvW")
 	YasuoMenu.Advanced.AdvW:addParam("AutoWall", "Use Wall (W)", SCRIPT_PARAM_ONOFF, true)
@@ -383,41 +412,86 @@ function WallMenu()
         YasuoWall:addParam("BAttack","Block special attacks",SCRIPT_PARAM_ONOFF,true)
         YasuoWall:addParam("CAttack","Block crit attack",SCRIPT_PARAM_ONOFF,true)		
         for i,enemy in pairs (GetEnemyHeroes()) do
-            for j,spell in pairs (Spells) do
-			    if skillShield[enemy.charName] == nil then return end
-                enemyspell = enemy:GetSpellData(spell).name
-	            spelltype, casttype = getSpellType(enemy, enemyspell)
-                if skillShield[enemy.charName] then 
-                    if skillShield[enemy.charName][spelltype]["YWall"] then 
-                        YasuoWall:addParam(tostring(enemy:GetSpellData(spell).name),"Block "..tostring(enemy.charName).." Spell "..tostring(Spells2[j]),SCRIPT_PARAM_ONOFF,true)
-                    end 
-                end
-				if enemy.charName == "Yasuo" then
-				    YasuoWall:addParam(tostring("yasuoq3w"),"Block "..tostring(enemy.charName).." Spell ".. " Q3",SCRIPT_PARAM_ONOFF,true)
+		    if AddSkillist[enemy.charName] ~= nil then
+			    for j,spell in pairs (Spells) do
+				    for _, skill in pairs(AddSkillist[enemy.charName].skilladd) do
+			            if skill.spelltype ~= spell then
+					        if skill["YWall"] and YasuoWall[tostring(skill.spellname)] == nil then
+					            YasuoWall:addParam(tostring(skill.spellname),"Block "..tostring(enemy.charName).." Spell "..tostring(skill.spelltype),SCRIPT_PARAM_ONOFF,true)
+					        end
+						    if skillShield[enemy.charName] ~= nil then
+						        enemyspell = enemy:GetSpellData(spell).name
+							    spelltype, casttype = getSpellType(enemy, enemyspell)
+							    if skillShield[enemy.charName][spelltype]["YWall"] and YasuoWall[tostring(enemy:GetSpellData(spell).name)] == nil then
+							        YasuoWall:addParam(tostring(enemy:GetSpellData(spell).name),"Block "..tostring(enemy.charName).." Spell "..tostring(Spells2[j]),SCRIPT_PARAM_ONOFF,true)
+							    end
+						    end
+					    else
+						    if skill["YWall"] and YasuoWall[tostring(skill.spellname)] == nil then
+					            YasuoWall:addParam(tostring(skill.spellname),"Block "..tostring(enemy.charName).." Spell "..tostring(Spells2[j]),SCRIPT_PARAM_ONOFF,true)
+					        end
+                        end							
+					end	
 				end
+			else
+                for j,spell in pairs (Spells) do
+			        if skillShield[enemy.charName] ~= nil then
+                        enemyspell = enemy:GetSpellData(spell).name
+	                    spelltype, casttype = getSpellType(enemy, enemyspell)
+                        if skillShield[enemy.charName] then 
+                            if skillShield[enemy.charName][spelltype]["YWall"] then 
+                                YasuoWall:addParam(tostring(enemy:GetSpellData(spell).name),"Block "..tostring(enemy.charName).." Spell "..tostring(Spells2[j]),SCRIPT_PARAM_ONOFF,true)
+                            end
+						end
+					end
+                end
             end 
-        end  
+        end 
 end
 
 function DashMenu()
     YasuoDash = scriptConfig("Yasuo Dash Evade Menu","YasuoDash")
     YasuoDash:addParam("smartdash","Use smart dash in combo", SCRIPT_PARAM_ONOFF,true)	
         for i,enemy in pairs (GetEnemyHeroes()) do
-            for j,spell in pairs (Spells) do
-			    if skillShield[enemy.charName] == nil then return end
-                enemyspell = enemy:GetSpellData(spell).name
-	            spelltype, casttype = getSpellType(enemy, enemyspell)
-                if (spelltype == "Q" or spelltype == "W" or spelltype == "E" or spelltype == "R") then
-                    shottype = skillData[enemy.charName][spelltype]["type"]
-                    if shottype > 0 then					 
-                        YasuoDash:addParam(tostring(enemy:GetSpellData(spell).name),"Dash to Evade "..tostring(enemy.charName).." Spell "..tostring(Spells2[j]),SCRIPT_PARAM_ONOFF,true)
-                    end 
-                end
-				if enemy.charName == "Yasuo" then
-				    YasuoDash:addParam(tostring("yasuoq3w"),"Dash to Evade "..tostring(enemy.charName).." Spell ".. " Q3",SCRIPT_PARAM_ONOFF,true)
+		    if AddSkillist[enemy.charName] ~= nil then
+			    for j,spell in pairs (Spells) do
+				    for _, skill in pairs(AddSkillist[enemy.charName].skilladd) do
+			            if skill.spelltype ~= spell then
+						    shottype = skill.shottype
+							if shottype > 0 and YasuoDash[tostring(skill.spellname)] == nil then
+					            YasuoDash:addParam(tostring(skill.spellname),"Dash to Evade "..tostring(enemy.charName).." Spell "..tostring(skill.spelltype),SCRIPT_PARAM_ONOFF,true)
+						    end
+							if skillShield[enemy.charName] ~= nil then
+						        enemyspell = enemy:GetSpellData(spell).name
+							    spelltype, casttype = getSpellType(enemy, enemyspell)
+							    shottype = skillData[enemy.charName][spelltype]["type"]
+							    if shottype > 0 and YasuoDash[tostring(enemy:GetSpellData(spell).name)] == nil then
+							        YasuoDash:addParam(tostring(enemy:GetSpellData(spell).name),"Dash to Evade "..tostring(enemy.charName).." Spell "..tostring(Spells2[j]),SCRIPT_PARAM_ONOFF,true)
+							    end
+							end
+					    else
+					        shottype = skill.shottype
+						    if shottype > 0 and YasuoDash[tostring(skill.spellname)] == nil then
+					            YasuoDash:addParam(tostring(skill.spellname),"Dash to Evade "..tostring(enemy.charName).." Spell "..tostring(Spells2[j]),SCRIPT_PARAM_ONOFF,true)
+					        end
+                        end							
+					end	
+				end
+			else
+                for j,spell in pairs (Spells) do
+			        if skillShield[enemy.charName] ~= nil then
+                        enemyspell = enemy:GetSpellData(spell).name
+	                    spelltype, casttype = getSpellType(enemy, enemyspell)
+						if (spelltype == "Q" or spelltype == "W" or spelltype == "E" or spelltype == "R") then
+                            shottype = skillData[enemy.charName][spelltype]["type"]
+                            if shottype > 0 then					 
+                                YasuoDash:addParam(tostring(enemy:GetSpellData(spell).name),"Dash to Evade "..tostring(enemy.charName).." Spell "..tostring(Spells2[j]),SCRIPT_PARAM_ONOFF,true)
+                            end 
+						end
+                    end
 				end
             end 
-        end 
+        end
 end
 
 function OrbwalkMenu()
@@ -780,44 +854,6 @@ function OnProcessSpell(unit,spell)
     if unit.isMe and (spell.name == "yasuoq" or spell.name == "yasuoq2" or spell.name == "yasuoq3w")then
 	    ResetAA()
 	end
-	if unit and unit.type == "AIHeroClient" and unit.team ~= myHero.team and spell.name == "rivenizunablade" and WREADY and GetDistance(spell.startPos) < 900 then
-	    local hitchampiont = checkhitcone(unit, spell.endPos, 45, 900, myHero, myHero.boundingRadius)
-	    if hitchampiont == true then
-		    CastSpell(_W,spell.startPos.x,spell.startPos.z)
-		end
-	end
-	if unit and unit.type == "AIHeroClient" and unit.team ~= myHero.team and spell.name == "yasuoq3w" and GetDistance(spell.startPos) < 900 then
-	    local hitchampiont = checkhitlinepass(unit, spell.endPos, 90, 900, myHero, myHero.boundingRadius)
-	    if hitchampiont == true then
-		    if EREADY and YasuoDash[spell.name] then
-		        for i, minion in pairs(EnemyMinions.objects) do
-				    if minion and GetDistance(minion) <= Ranges.E and not HaveBuffE("YasuoDashWrapper", minion) then
-					    local currentPoint = myHero + (Vector(minion) - myHero):normalized() * 475
-				        local hitchampiont2 = checkhitlinepass(unit, spell.endPos, 45, 900, currentPoint, myHero.boundingRadius)
-                        if (hitchampiont2 == false) and not UnderTurret(currentPoint) and (GetDistance(unit) < GetDistance(unit,currentPoint) or YasuoMenu.ComboKey or YasuoMenu.HarassKey) and YasuoDash[spell.name] then
-					    	CastSpell(_E,minion)
-				    	else
-				    		if WREADY and YasuoWall[spell.name] then							
-					    	    if YasuoMenu.Advanced.Packets.packetsW then
-					    		    WPacket(_W,spell.startPos,spell.startPos)
-					    		else
-					    	        CastSpell(_W,spell.startPos.x,spell.startPos.z)
-						    	end
-					    	end
-					    end
-					end
-				end
-			else
-			    if WREADY and YasuoWall[spell.name] then							
-					if YasuoMenu.Advanced.Packets.packetsW then
-						WPacket(_W,spell.startPos,spell.startPos)
-					else
-						CastSpell(_W,spell.startPos.x,spell.startPos.z)
-				    end
-				end
-			end
-		end
-	end
     if unit.isMe and spell.name == "YasuoDashWrapper" then
 		ePos, sPos, myPos = Vector(spell.endPos.x, spell.endPos.y, spell.endPos.z), Vector(spell.startPos.x, spell.startPos.y, spell.startPos.z), Vector(myHero.pos.x, myHero.pos.y, myHero.pos.z)
 		TargetPos = Vector(spell.target.pos.x, spell.target.pos.y, spell.target.pos.z)
@@ -836,10 +872,17 @@ function OnProcessSpell(unit,spell)
 				if ValidTargetedT(enemy) and spell.target == enemy and IsDashing2() and (Q12READY or Q3READY) and GetDistance(sPos,enemy) > 250 then
 				    CastSpell(_Q,enemy.x,enemy.z)
 				end
-			    DelayAction(function()	
+			    DelayAction(function()
 		            if ValidTargetedT(enemy) then
-				        if GetDistance(enemy,dashPoint) < 300 and GetDistance(enemy) < 325 and (Q12READY or Q3READY) then
-				            CastSpell(_Q,enemy.x,enemy.z)
+					    local PredictPosEnemy = VP:GetPredictedPos(enemy, 0.2)
+						if YasuoMenu.Advanced.AdvQ.ExQ == 1 then
+						    if GetDistance(PredictPosEnemy,dashPoint) < 325 and GetDistance(enemy,dashPoint) < 350 and (Q12READY or Q3READY) then
+							    CastSpell(_Q,enemy.x,enemy.z)
+							end
+				        else
+						    if GetDistance(enemy,dashPoint) < 300 and GetDistance(enemy) < 325 and (Q12READY or Q3READY) then
+				                CastSpell(_Q,enemy.x,enemy.z)
+							end
 				        end
 				    end
 				end, 0.395)
@@ -860,31 +903,26 @@ function OnProcessSpell(unit,spell)
 		    YWall= false
 		    shottype,radius,maxdistance = 0,0,0
 			shottype2,radius2,maxdistance2 = 0,0,0
-		    if unit.type == "AIHeroClient" then
-			    if skillShield[unit.charName] == nil then return end
-			    spelltype, casttype = getSpellType(unit, spell.name)
-			    --if casttype == 4 or casttype == 5 or casttype == 6 then return end
-			    if spelltype == "BAttack" and YasuoWall.BAttack then
-				    YWall = true
-			    elseif spelltype == "CAttack" and YasuoWall.CAttack then
-				    YWall = true
-			    elseif (spelltype == "Q" or spelltype == "W" or spelltype == "E" or spelltype == "R") and YasuoWall[spell.name] then
-				    YWall = skillShield[unit.charName][spelltype]["YWall"]
-				    shottype = skillData[unit.charName][spelltype]["type"]
-				    radius = skillData[unit.charName][spelltype]["radius"]
-				    maxdistance = skillData[unit.charName][spelltype]["maxdistance"]
-				elseif (spelltype == "Q" or spelltype == "W" or spelltype == "E" or spelltype == "R") and YasuoDash[spell.name] then
-				    YWall = skillShield[unit.charName][spelltype]["YWall"]
-				    shottype = skillData[unit.charName][spelltype]["type"]
-				    radius = skillData[unit.charName][spelltype]["radius"]
-				    maxdistance = skillData[unit.charName][spelltype]["maxdistance"]
-			    elseif (spelltype == "P" or spelltype == "QM" or spelltype == "WM" or spelltype == "EM") and YasuoWall.PMSpell then
-				    YWall = skillShield[unit.charName][spelltype]["YWall"]
-				    shottype = skillData[unit.charName][spelltype]["type"]
-				    radius = skillData[unit.charName][spelltype]["radius"]
-				    maxdistance = skillData[unit.charName][spelltype]["maxdistance"]
-			    end
-		    end
+		    if unit.type == ("AIHeroClient" or myHero.type) then
+				if AddSkillist[unit.charName] ~= nil then
+				    for _, skill in pairs(AddSkillist[unit.charName].skilladd) do
+				        if skill[spell.name] ~= nil and (YasuoWall[spell.name] or YasuoDash[spell.name]) then
+                            YWall = skill[spell.name]["YWall"]	
+                            shottype = skill[spell.name]["shottype"]
+                            radius = skill[spell.name]["radius"]
+                            maxdistance = skill[spell.name]["maxdistance"]
+                        else
+                            if skillShield[unit.charName] ~= nil then
+                                YWall, shottype, radius, maxdistance = 	GetSpellTypeLib(unit, spell.name)
+                            end
+						end
+                    end						
+				else
+				    if skillShield[unit.charName] ~= nil then
+                        YWall, shottype, radius, maxdistance = 	GetSpellTypeLib(unit, spell.name)
+					end
+				end
+			end
 		    for i=1, heroManager.iCount do
 			local allytarget = heroManager:GetHero(i)
 			    if allytarget.team == myHero.team and not allytarget.dead and allytarget.health > 0 then
@@ -952,6 +990,33 @@ function OnProcessSpell(unit,spell)
 		    end		
         end	
     end
+end
+
+function GetSpellTypeLib(unit, spellname)
+    local Ywall= false
+	local Shottype, Radius, Maxdistance = 0,0,0   
+	spelltype, casttype = getSpellType(unit, spellname)
+		if spelltype == "BAttack" and YasuoWall.BAttack then
+			Ywall = true
+		elseif spelltype == "CAttack" and YasuoWall.CAttack then
+			Ywall = true
+		elseif (spelltype == "Q" or spelltype == "W" or spelltype == "E" or spelltype == "R") and YasuoWall[spellname] then
+			Ywall = skillShield[unit.charName][spelltype]["YWall"]
+			Shottype = skillData[unit.charName][spelltype]["type"]
+			Radius = skillData[unit.charName][spelltype]["radius"]
+			Maxdistance = skillData[unit.charName][spelltype]["maxdistance"]
+		elseif (spelltype == "Q" or spelltype == "W" or spelltype == "E" or spelltype == "R") and YasuoDash[spellname] then
+			Ywall = skillShield[unit.charName][spelltype]["YWall"]
+			Shottype = skillData[unit.charName][spelltype]["type"]
+			Radius = skillData[unit.charName][spelltype]["radius"]
+			Maxdistance = skillData[unit.charName][spelltype]["maxdistance"]
+		elseif (spelltype == "P" or spelltype == "QM" or spelltype == "WM" or spelltype == "EM") and YasuoWall.PMSpell then
+			Ywall = skillShield[unit.charName][spelltype]["YWall"]
+			Shottype = skillData[unit.charName][spelltype]["type"]
+			Radius = skillData[unit.charName][spelltype]["radius"]
+			Maxdistance = skillData[unit.charName][spelltype]["maxdistance"]
+		end
+	return Ywall, Shottype, Radius, Maxdistance
 end
 
 function SmartE(unit)
@@ -2661,4 +2726,19 @@ function GetSlotItem(id, unit)
 		end
 	end
 
+end
+_G.LevelSpell = function(id)
+    if not VIP_USER then return end
+	local offsets = {[_Q] = 0x70, [_W] = 0xB0, [_E] = 0xF0, [_R] = 0x30,}
+	local p = CLoLPacket(0x0023)
+	p.vTable = 0xE23A7C
+	p:EncodeF(myHero.networkID)
+	p:Encode4(0xBEBEBEBE)
+	p:Encode4(0x16161616)
+	p:Encode1(0x6B)
+	p:Encode4(0x7C7C7C7C)
+	p:Encode1(offsets[id])
+	p:Encode4(0x00000000)
+	p:Encode1(0x00)
+	SendPacket(p)
 end
