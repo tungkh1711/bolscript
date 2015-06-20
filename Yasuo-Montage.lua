@@ -1,6 +1,6 @@
 if myHero.charName ~= "Yasuo" then return end
 
-local version = 0.29
+local version = 0.30
 local Author = "Tungkh1711"
 
 local UPDATE_NAME = "Yasuo-Montage"
@@ -109,6 +109,8 @@ local Dashing = false
 local Tdashing = false
 local Tdashing2 = false
 local Recalling = false
+
+local lastE = 0
 
 local Spells = {_Q,_W,_E,_R}
 local Spells2 = {"Q","W","E","R"}
@@ -261,6 +263,7 @@ function MainMenu()
 	YasuoMenu:addSubMenu("Extras Settings", "Extras")
 	YasuoMenu:addSubMenu("Prediction Settings", "Prediction")	
 	YasuoMenu:addSubMenu("Drawings Settings", "Draw")
+	YasuoMenu:addSubMenu("Humanizer Settings", "Humanizer")
 	YasuoMenu:addSubMenu("PermaShow Settings", "PermaShow")
 	-- Combo --
 	YasuoMenu.Combo:addParam("UseQ", "Use Q", SCRIPT_PARAM_ONOFF, true)
@@ -383,6 +386,9 @@ function MainMenu()
     YasuoMenu.Draw:addParam("drawTarget", "Draw current target: ", SCRIPT_PARAM_ONOFF, false)
     YasuoMenu.Draw:addParam("LagFree", "Lag Free Circles", SCRIPT_PARAM_ONOFF, false)
     YasuoMenu.Draw:addParam("CL", "Length before Snapping", SCRIPT_PARAM_SLICE, 75, 1, 2000, 0)
+	-- Humanizer --
+	YasuoMenu.Humanizer:addParam("Edelay", "Delay cast E (ms)", SCRIPT_PARAM_SLICE, 0, 0, 500, 0)
+	YasuoMenu.Humanizer:addParam("Wdelay", "Delay cast W (ms)", SCRIPT_PARAM_SLICE, 0, 0, 300, 0)
     -- Permashow --
     YasuoMenu.PermaShow:addParam("AutoQ", "Show AutoQ", SCRIPT_PARAM_ONOFF, true)	
     YasuoMenu.PermaShow:addParam("SmartHarass", "Show SmartHarass", SCRIPT_PARAM_ONOFF, true)
@@ -855,6 +861,7 @@ function OnProcessSpell(unit,spell)
 	    ResetAA()
 	end
     if unit.isMe and spell.name == "YasuoDashWrapper" then
+	    lastE = os.clock() * 1000
 		ePos, sPos, myPos = Vector(spell.endPos.x, spell.endPos.y, spell.endPos.z), Vector(spell.startPos.x, spell.startPos.y, spell.startPos.z), Vector(myHero.pos.x, myHero.pos.y, myHero.pos.z)
 		TargetPos = Vector(spell.target.pos.x, spell.target.pos.y, spell.target.pos.z)
 		if GetDistance(sPos,TargetPos) < 410 then
@@ -940,11 +947,7 @@ function OnProcessSpell(unit,spell)
 				    end
 				    if hitchampion then
 						if WREADY and allytarget.isMe and YWall and YasuoWall[spell.name] then							
-						    if YasuoMenu.Advanced.Packets.packetsW then
-							    WPacket(_W,spell.startPos,spell.startPos)
-							else
-						        CastSpell(_W,spell.startPos.x,spell.startPos.z)
-							end
+						    CastW(_W,spell.startPos,spell.startPos)
 						else
 					        if EREADY and allytarget.isMe and YasuoDash[spell.name] then
 						    --EnemyMinions:update()
@@ -974,11 +977,7 @@ function OnProcessSpell(unit,spell)
 								    		CastSpell(_E,minion)
 								    	else
 									        if WREADY and allytarget.isMe and YWall and YasuoWall[spell.name] then							
-						                        if YasuoMenu.Advanced.Packets.packetsW then
-							                        WPacket(_W,spell.startPos,spell.startPos)
-							                    else
-						                            CastSpell(_W,spell.startPos.x,spell.startPos.z)
-							                    end
+						                        CastW(_W,spell.startPos,spell.startPos)
 							                end
 							    		end
 								    end
@@ -1178,9 +1177,13 @@ end
 function E(unit)
     if unit ~= nil and ValidTargetedT(unit,Ranges.E) and EREADY and not HaveBuffE("YasuoDashWrapper",unit) then
         if YasuoMenu.Advanced.Packets.packetsE then
-            Packet("S_CAST", {spellId = _E, targetNetworkId = unit.networkID}):send()
+		    if lastE + YasuoMenu.Humanizer.Edelay < os.clock() * 1000 then
+                Packet("S_CAST", {spellId = _E, targetNetworkId = unit.networkID}):send()
+			end
         else
-            CastSpell(_E, unit) 
+		    if lastE + YasuoMenu.Humanizer.Edelay < os.clock() * 1000 then
+                CastSpell(_E, unit)
+			end
         end
     end
 end
@@ -1355,6 +1358,18 @@ function QPacket(id, param1, param2)
     fromX = param2.x,
     fromY = param2.z
 	}):send()
+end
+
+function CastW(id, param1, param2)
+    if YasuoMenu.Advanced.Packets.packetsW then
+	    DelayAction(function()
+	        Packet("S_CAST", {spellId = id, toX = param1.x, toY = param1.z, fromX = param2.x, fromY = param2.z}):send()
+		end, YasuoMenu.Humanizer.Wdelay / 1000)
+	else
+	    DelayAction(function()
+	        CastSpell(id, param1.x, param2.z)
+		end, YasuoMenu.Humanizer.Wdelay / 1000)
+	end
 end
 
 function WPacket(id, param1, param2)
