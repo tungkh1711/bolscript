@@ -1,6 +1,6 @@
 if myHero.charName ~= "Yasuo" then return end
 
-local version = 0.30
+local version = 0.31
 local Author = "Tungkh1711"
 
 local UPDATE_NAME = "Yasuo-Montage"
@@ -1157,6 +1157,23 @@ function OnRemoveBuff(unit, buff)
 	if unit and unit.isMe and buff.name == "RegenerationPotion" then
 	    UsingPot = false
 	end
+	if unit and unit.team ~= myHero.team and buff.name == "YasuoDashWrapper" then
+	    if UnitWithE[unit.networkID] ~= nil then
+	        UnitWithE[unit.networkID] = nil
+		end
+	end
+	if unit and unit.team == TEAM_ENEMY and unit.type == myHero.type and buff.type == 29 then
+		if Knockups[unit.networkID] ~= nil then
+	        unitknocked = unitknocked - 1
+		    Knockups[unit.networkID] = nil
+	    end
+	end
+	if unit and unit.team == TEAM_ENEMY and unit.type == myHero.type and  buff.name == "yasuoq3mis" then
+	    if TargetKnockedup[unit.networkID] ~= nil then
+            targetknocked = targetknocked - 1
+		    TargetKnockedup[unit.networkID] = nil
+		end
+    end
 end
 
 function GapClose(unit)
@@ -1361,14 +1378,15 @@ function QPacket(id, param1, param2)
 end
 
 function CastW(id, param1, param2)
+    local GameTime = GetGameTimerT()
     if YasuoMenu.Advanced.Packets.packetsW then
-	    DelayAction(function()
+	    if os.clock() * 1000 > GameTime + YasuoMenu.Humanizer.Wdelay then
 	        Packet("S_CAST", {spellId = id, toX = param1.x, toY = param1.z, fromX = param2.x, fromY = param2.z}):send()
-		end, YasuoMenu.Humanizer.Wdelay / 1000)
+		end
 	else
-	    DelayAction(function()
+	    if os.clock() * 1000 > GameTime + YasuoMenu.Humanizer.Wdelay then
 	        CastSpell(id, param1.x, param2.z)
-		end, YasuoMenu.Humanizer.Wdelay / 1000)
+		end
 	end
 end
 
