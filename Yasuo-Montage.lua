@@ -1,6 +1,6 @@
 if myHero.charName ~= "Yasuo" then return end
 
-local version = 0.31
+local version = 0.32
 local Author = "Tungkh1711"
 
 local UPDATE_NAME = "Yasuo-Montage"
@@ -1134,8 +1134,8 @@ function OnApplyBuff(source, unit, buff)
 	if unit and unit.team ~= myHero.team and buff.name == "YasuoDashWrapper" then
 	    UnitWithE[unit.networkID] = os.clock() + (buff.endTime - buff.startTime)
 	end
-	if unit and unit.team == TEAM_ENEMY and unit.type == myHero.type and buff.type == 29 then
-	    unitknocked = unitknocked + 1
+	if unit and unit.team == TEAM_ENEMY and unit.type == myHero.type and buff.type == 29 and then
+	    --unitknocked = unitknocked + 1
 		Knockups[unit.networkID] = os.clock() + (buff.endTime - buff.startTime)
 	end
 	if unit and unit.team == TEAM_ENEMY and unit.type == myHero.type and  buff.name == "yasuoq3mis" then
@@ -1164,7 +1164,7 @@ function OnRemoveBuff(unit, buff)
 	end
 	if unit and unit.team == TEAM_ENEMY and unit.type == myHero.type and buff.type == 29 then
 		if Knockups[unit.networkID] ~= nil then
-	        unitknocked = unitknocked - 1
+	        --unitknocked = unitknocked - 1
 		    Knockups[unit.networkID] = nil
 	    end
 	end
@@ -1237,11 +1237,12 @@ function ComboT(target)
             if not YasuoMenu.Advanced.AdvR[target.charName] then
                 return
             end
-			if Knockups[target.networkID] == nil then return end
-		    if YasuoMenu.Advanced.AdvR.Delay and (os.clock() - currentknocked) >= 0 then
-			    R(target)
-			elseif not YasuoMenu.Advanced.AdvR.Delay then 
-			    R(target)
+			if Knockups[target.networkID] ~= nil then
+		        if YasuoMenu.Advanced.AdvR.Delay and (os.clock() - currentknocked) >= 0 then
+			        R(target)
+			    elseif not YasuoMenu.Advanced.AdvR.Delay then 
+			        R(target)
+			    end
 			end
         end
 		if YasuoMenu.Combo.UseItems then
@@ -1432,8 +1433,8 @@ function AutoRUnderTurret()
 	return closestchamp
 end
 
-function R(target)
-	if target ~= nil and GetDistance(target) < Ranges.R and RREADY then
+function R(unit)
+	if GetDistance(unit) < Ranges.R and RREADY and Knockups[unit.networkID] ~= nil then
         if YasuoMenu.Advanced.Packets.packetsR then
             Packet("S_CAST", {spellId = _R}):send()
         else
@@ -1805,9 +1806,9 @@ end
 
 function OnCreateObj(obj)
     if not obj then return end
-	--if obj and (obj.name=="Yasuo_base_R_indicator_beam.troy" or obj.name=="Yasuo_Skin02_R_indicator_beam.troy") then
-		--unitknocked = unitknocked + 1
-    --end
+	if obj and (obj.name=="Yasuo_base_R_indicator_beam.troy" or obj.name=="Yasuo_Skin02_R_indicator_beam.troy") then
+		unitknocked = unitknocked + 1
+    end
   	if FocusJungleNames[obj.name] then
       	table.insert(JungleFocusMobs, obj)
   	elseif JungleMobNames[obj.name] then
@@ -1820,9 +1821,9 @@ end
 
 function OnDeleteObj(obj)
     if not obj then return end
-	--if obj and (obj.name=="Yasuo_base_R_indicator_beam.troy" or obj.name=="Yasuo_Skin02_R_indicator_beam.troy") then
-		--unitknocked = unitknocked - 1
-    --end
+	if obj and (obj.name=="Yasuo_base_R_indicator_beam.troy" or obj.name=="Yasuo_Skin02_R_indicator_beam.troy") then
+		unitknocked = unitknocked - 1
+    end
   	for i, Mob in pairs(JungleMobs) do
       	if obj.name == Mob.name then
         	table.remove(JungleMobs, i)
@@ -2316,7 +2317,7 @@ function BuffReset()
 	for i, obj in pairs(UnitWithE) do
 		if os.clock() >= obj then
 			UnitWithE[i] = nil
-			unitknocked = unitknocked - 1
+			--unitknocked = unitknocked - 1
 		end
 	end
 	for i,obj in pairs(TargetKnockedup) do
