@@ -1134,7 +1134,7 @@ function OnApplyBuff(source, unit, buff)
 	if unit and unit.team ~= myHero.team and buff.name == "YasuoDashWrapper" then
 	    UnitWithE[unit.networkID] = os.clock() + (buff.endTime - buff.startTime)
 	end
-	if unit and unit.team == TEAM_ENEMY and unit.type == myHero.type and buff.type == 29 and then
+	if unit and unit.team == TEAM_ENEMY and unit.type == myHero.type and buff.type == 29 then
 	    --unitknocked = unitknocked + 1
 		Knockups[unit.networkID] = os.clock() + (buff.endTime - buff.startTime)
 	end
