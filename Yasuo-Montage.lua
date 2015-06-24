@@ -1,6 +1,6 @@
 if myHero.charName ~= "Yasuo" then return end
 
-local version = 0.32
+local version = 0.33
 local Author = "Tungkh1711"
 
 local UPDATE_NAME = "Yasuo-Montage"
@@ -10,7 +10,91 @@ local UPDATE_PATH2 = "/tungkh1711/bolscript/master/Yasuo-Montage.lua"
 local UPDATE_FILE_PATH = SCRIPT_PATH..GetCurrentEnv().FILE_NAME
 local UPDATE_URL = "http://"..UPDATE_HOST..UPDATE_PATH2
 _G.UseUpdater = true
+_G.BuffFix = false  -- Set this to true if the script not auto ult 
 --------------------------------------------------------------
+if _G.BuffFix then
+_G.BUFF_NONE = 0
+_G.BUFF_GLOBAL = 1
+_G.BUFF_BASIC = 2
+_G.BUFF_DEBUFF = 3
+_G.BUFF_STUN = 5
+_G.BUFF_STEALTH = 6
+_G.BUFF_SILENCE = 7
+_G.BUFF_TAUNT = 8
+_G.BUFF_SLOW = 10
+_G.BUFF_ROOT = 11
+_G.BUFF_DOT = 12
+_G.BUFF_REGENERATION = 13
+_G.BUFF_SPEED = 14
+_G.BUFF_MAGIC_IMMUNE = 15
+_G.BUFF_PHYSICAL_IMMUNE = 16
+_G.BUFF_IMMUNE = 17
+_G.BUFF_Vision_Reduce = 19
+_G.BUFF_FEAR = 21
+_G.BUFF_CHARM = 22
+_G.BUFF_POISON = 23
+_G.BUFF_SUPPRESS = 24
+_G.BUFF_BLIND = 25
+_G.BUFF_STATS_INCREASE = 26
+_G.BUFF_STATS_DECREASE = 27
+_G.BUFF_FLEE = 28
+_G.BUFF_KNOCKUP = 29
+_G.BUFF_KNOCKBACK = 30
+_G.BUFF_DISARM = 31
+    class 'BuffManager'
+	
+	AdvancedCallback:register('OnApplyBuff', 'OnRemoveBuff')
+	
+	function BuffManager:__init()
+		self.heroes = {}
+		self.buffs  = {}
+		for i = 1, heroManager.iCount do
+        	local hero = heroManager:GetHero(i)
+       		table.insert(self.heroes, hero)
+        	self.buffs[hero.networkID] = {}
+    	end
+    	AddTickCallback(function () self:Tick() end)
+	end
+
+	function BuffManager:Tick()
+		for i, hero in ipairs(self.heroes) do
+			for i = 1, hero.buffCount do
+				local buff = hero:getBuff(i)
+				if self:Valid(buff) then
+					local info = {unit = hero, buff = buff, slot = i, sent = false, sent2 = false}
+					if not self.buffs[hero.networkID][info.buff.name] then
+						self.buffs[hero.networkID][info.buff.name] = info
+					end
+				end
+			end
+		end
+		for nid, table in pairs(self.buffs) do
+			for i, buffs in pairs(table) do
+				local buff = buffs.buff
+				if self:Valid(buff) and not buffs.sent then
+					local buffinfo = {name = buff.name:lower(), slot = buff.slot, duration = (buff.endT - buff.startT), startTime = buff.startT, endTime  = buff.endT, stacks = 1, type = buff.type}
+					AdvancedCallback:OnApplyBuff(buffs.source, buffs.unit, buffinfo)
+					buffs.sent = true
+				elseif not self:Valid(buff) and not buffs.sent2 then
+					local buffinfo = {name = buff.name:lower(), slot = buff.slot, duration = (buff.endT - buff.startT), startTime = buff.startT, endTime = buff.endT, stacks = 0, type = buff.type}
+					AdvancedCallback:OnRemoveBuff(buffs.unit, buffinfo)
+					self.buffs[buffs.unit.networkID][buff.name] = nil
+					buffs.sent2 = true
+				end
+			end
+		end
+	end
+
+	function BuffManager:Valid(buff)
+		return buff and buff.name and buff.startT <= GetGameTimer() and buff.endT >= GetGameTimer()
+	end
+
+	function BuffManager:HasBuff(unit, buffname)
+		return self.buffs[unit.networkID][buffname]:lower() ~= nil
+	end
+	----------------------------
+	Buffs = BuffManager()
+end
 -----------------------------------
 
 local REQUIRED_LIBS = {
@@ -94,6 +178,7 @@ local TargetKnockedup = {}
 local Knockups = {}
 local unitknocked = 0
 local targetknocked = 0
+local DelayE = 0.395
 
 local YasuoLevel = { QEW = { 1,3,2,1,1,4,1,3,1,3,4,3,3,2,2,4,2,2}, EQW = { 3,1,2,1,1,4,1,3,1,3,4,3,3,2,2,4,2,2}}
       
@@ -387,7 +472,7 @@ function MainMenu()
     YasuoMenu.Draw:addParam("LagFree", "Lag Free Circles", SCRIPT_PARAM_ONOFF, false)
     YasuoMenu.Draw:addParam("CL", "Length before Snapping", SCRIPT_PARAM_SLICE, 75, 1, 2000, 0)
 	-- Humanizer --
-	YasuoMenu.Humanizer:addParam("Edelay", "Delay cast E (ms)", SCRIPT_PARAM_SLICE, 0, 0, 500, 0)
+	YasuoMenu.Humanizer:addParam("Edelay", "Delay cast E (ms)", SCRIPT_PARAM_SLICE, 0, 0, 1000, 0)
 	YasuoMenu.Humanizer:addParam("Wdelay", "Delay cast W (ms)", SCRIPT_PARAM_SLICE, 0, 0, 300, 0)
     -- Permashow --
     YasuoMenu.PermaShow:addParam("AutoQ", "Show AutoQ", SCRIPT_PARAM_ONOFF, true)	
@@ -759,6 +844,11 @@ function Check()
 		    return
 	    end
 	end
+	if myHero:GetSpellData(_E).level == 2 then DelayE = 0.39
+	elseif myHero:GetSpellData(_E).level == 3 then DelayE = 0.385
+	elseif myHero:GetSpellData(_E).level == 4 then DelayE = 0.38
+	elseif myHero:GetSpellData(_E).level == 5 then DelayE = 0.375
+	end
 	Dashing = lastAnimation == "Spell3" and true or false
 	Qult = lastAnimation == "Spell4" and true or false
 	Ranges.Q3 = YasuoMenu.Advanced.AdvQ.QSlider
@@ -892,7 +982,7 @@ function OnProcessSpell(unit,spell)
 							end
 				        end
 				    end
-				end, 0.395)
+				end, DelayE)
 			end
         end
 		if YasuoMenu.ClearKey then
@@ -973,7 +1063,7 @@ function OnProcessSpell(unit,spell)
 					  	    		    elseif shottype == 6 then hitchampion2 = checkhitlinepass(unit, spell.endPos, radius, maxdistance, currentPoint, myHero.boundingRadius) or checkhitlinepass(unit, Vector(unit)*2-spell.endPos, radius, maxdistance, currentPoint, myHero.boundingRadius)
 					   		    	    elseif shottype == 7 then hitchampion2 = checkhitcone(spell.endPos, unit, radius, maxdistance, currentPoint, myHero.boundingRadius)
 							    		end
-								    	if not hitchampion2 and not UnderTurret(eEndPos(minion)) and ((GetDistance(predictPos) < GetDistance(predictPos, currentPoint) and not YasuoMenu.ComboKey and not YasuoMenu.HarassKey) or (YasuoMenu.ComboKey and YasuoDash.smartdash and GetDistance(predictPos) > GetDistance(predictPos, currentPoint)) or YasuoMenu.HarassKey) then
+								    	if not hitchampion2 and not UnderTurret(eEndPos(minion)) and ((GetDistance(predictPos) < GetDistance(predictPos, currentPoint) and not YasuoMenu.ComboKey) or (YasuoMenu.ComboKey and YasuoDash.smartdash and GetDistance(predictPos) > GetDistance(predictPos, currentPoint)) or YasuoMenu.HarassKey) then
 								    		CastSpell(_E,minion)
 								    	else
 									        if WREADY and allytarget.isMe and YWall and YasuoWall[spell.name] then							
@@ -1379,14 +1469,22 @@ function QPacket(id, param1, param2)
 end
 
 function CastW(id, param1, param2)
-    local GameTime = GetGameTimerT()
+    local DelayW = YasuoMenu.Humanizer.Wdelay / 1000
     if YasuoMenu.Advanced.Packets.packetsW then
-	    if os.clock() * 1000 > GameTime + YasuoMenu.Humanizer.Wdelay then
+	    if DelayW == 0 then
 	        Packet("S_CAST", {spellId = id, toX = param1.x, toY = param1.z, fromX = param2.x, fromY = param2.z}):send()
+		else
+		    DelayAction(function()
+			    Packet("S_CAST", {spellId = id, toX = param1.x, toY = param1.z, fromX = param2.x, fromY = param2.z}):send()
+			end, DelayW)
 		end
 	else
-	    if os.clock() * 1000 > GameTime + YasuoMenu.Humanizer.Wdelay then
+	    if DelayW == 0 then
 	        CastSpell(id, param1.x, param2.z)
+		else
+		    DelayAction(function()
+			    CastSpell(id, param1.x, param2.z)
+			end, DelayW)
 		end
 	end
 end
@@ -1807,7 +1905,7 @@ end
 function OnCreateObj(obj)
     if not obj then return end
 	if obj and (obj.name=="Yasuo_base_R_indicator_beam.troy" or obj.name=="Yasuo_Skin02_R_indicator_beam.troy") then
-		unitknocked = unitknocked + 1
+		--unitknocked = unitknocked + 1
     end
   	if FocusJungleNames[obj.name] then
       	table.insert(JungleFocusMobs, obj)
@@ -1822,7 +1920,7 @@ end
 function OnDeleteObj(obj)
     if not obj then return end
 	if obj and (obj.name=="Yasuo_base_R_indicator_beam.troy" or obj.name=="Yasuo_Skin02_R_indicator_beam.troy") then
-		unitknocked = unitknocked - 1
+		--unitknocked = unitknocked - 1
     end
   	for i, Mob in pairs(JungleMobs) do
       	if obj.name == Mob.name then
@@ -1999,15 +2097,21 @@ function AutoR()
 		return
     end
     if YasuoMenu.Advanced.AdvR.AutoR then
+	    local Rhit = 0
+		for i, enemy in ipairs(GetEnemyHeroes()) do 
+	        if Knockups[enemy.networkID] ~= nil and GetDistance(enemy) < Ranges.R then
+		        Rhit = Rhit + 1
+			end
+		end
         if YasuoMenu.Advanced.AdvR.myTarget then
-            if YasuoMenu.Advanced.AdvR.xNumber == 1 and targetknocked == 1 and RREADY then
+            if targetknocked == 1 and RREADY then
                 DelayAction(function()
                     CastSpell(_R)
                 end, 0.5 - GetLatency() / 1000)
-            elseif YasuoMenu.Advanced.AdvR.xNumber > 1 and targetknocked >= YasuoMenu.Advanced.AdvR.xNumber and RREADY then
+            elseif targetknocked >= 2 and RREADY then
                 CastSpell(_R)
             end
-        elseif not YasuoMenu.Advanced.AdvR.myTarget and RREADY and unitknocked >= YasuoMenu.Advanced.AdvR.xNumber and unitknocked >= YasuoMenu.Advanced.AdvR.xEnemies then
+        elseif not YasuoMenu.Advanced.AdvR.myTarget and RREADY and Rhit >= YasuoMenu.Advanced.AdvR.xEnemies then
             CastSpell(_R)
         end
     end
@@ -2760,19 +2864,4 @@ function GetSlotItem(id, unit)
 		end
 	end
 
-end
-_G.LevelSpell = function(id)
-    if not VIP_USER then return end
-	local offsets = {[_Q] = 0x70, [_W] = 0xB0, [_E] = 0xF0, [_R] = 0x30,}
-	local p = CLoLPacket(0x0023)
-	p.vTable = 0xE23A7C
-	p:EncodeF(myHero.networkID)
-	p:Encode4(0xBEBEBEBE)
-	p:Encode4(0x16161616)
-	p:Encode1(0x6B)
-	p:Encode4(0x7C7C7C7C)
-	p:Encode1(offsets[id])
-	p:Encode4(0x00000000)
-	p:Encode1(0x00)
-	SendPacket(p)
 end
