@@ -1,4 +1,5 @@
-_G.GetRegion = function() return "NA" end
+local Region = "NA"
+_G.GetRegion = function() return Region end
 _G.BuffFix = true  -- Set this to true if OnApplyBuff don't work
 --------------------------------------------------------------
 if _G.BuffFix then
